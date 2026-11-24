@@ -11,3 +11,7 @@ Five original SVG reward-tier illustrations; more debris; flying prize and score
 - End during an animation; ensure report is correct.
 - Run node tests/engine.test.cjs if Node is available.
 Browser/device testing and independent security review remain outstanding. Use fictional nicknames. No persistent athlete data.
+
+## Beta 0.3 follow-up
+Session types: Independent Training, Practice Bullpen, Coached Lesson, Competitive Challenge. Single pitch or mixed selection; mixed uses a randomly shuffled cycle of coach-approved pitches (no weights yet). Calls and per-pitch reports describe requested pitch type, not verified actual pitch type. Location targets continue changing independently. Correction restores the original call and location and preserves the next call. New island artwork and stronger visual hierarchy, color-coded pitch badges, combo effects. Still static and dependency-free.
+Test two approved pitch types, each single mode, all approved types, invalid one-type mixed setup, undo during mixed and final pitch, pitch report denominators, portrait/landscape, sound and arcade view. Physical device and security tests remain outstanding.

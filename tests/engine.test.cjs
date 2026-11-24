@@ -16,3 +16,13 @@ E.record(u,third,rng);assert.equal(u.ended,true);assert.equal(u.score,600);asser
 E.undo(u);E.undo(u);assert.equal(u.target,second);assert.equal(u.score,100);assert.equal(u.streak,1);assert.equal(u.best,1);
 E.undo(u);assert.equal(u.score,0);assert.equal(E.undo(u),null);assert.equal(E.report(u).n,0);
 console.log("Undo and final pitch correction tests passed.");
+const mix=E.start({cap:6,level:1,pitch:"Mixed",allowed:["Fastball","Changeup","Slider"]},rng);
+const sequence=[];for(let i=0;i<6;i++){sequence.push(mix.currentPitch);E.record(mix,i===2?-1:mix.target,rng);}
+assert.equal(sequence.join(","),"Fastball,Changeup,Slider,Fastball,Changeup,Slider");
+assert.equal(E.report(mix).byPitch.find(p=>p.pitch==="Slider").hits,1);
+const last=E.undo(mix);assert.equal(mix.currentPitch,last.pitch);assert.equal(mix.target,last.target);E.record(mix,mix.target,rng);assert.equal(E.report(mix).byPitch.find(p=>p.pitch==="Slider").attempts,2);
+const fix=E.start({cap:5,level:0,pitch:"Mixed",allowed:["Fastball","Changeup"]},rng);
+E.record(fix,fix.target,rng);const upcoming=fix.currentPitch,zone=fix.target;E.undo(fix);assert.equal(fix.currentPitch,"Fastball");E.record(fix,fix.target,rng);assert.equal(fix.currentPitch,upcoming);assert.equal(fix.target,zone);
+assert.throws(()=>E.start({cap:5,level:0,pitch:"Mixed",allowed:["Fastball"]},rng));
+const single=E.start({cap:3,level:0,pitch:"Curveball"},rng);for(let i=0;i<3;i++)assert.equal(E.record(single,single.target,rng).pitch,"Curveball");
+console.log("Mixed pitch and correction tests passed.");
