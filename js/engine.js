@@ -14,8 +14,15 @@ const Bullpen = (function makeEngine(){
  s.shots.push(shot);s.score+=points;
  if(s.shots.length===s.settings.cap)s.ended=true;else s.target=choose(target,rng);
  return shot;}
+ function undo(s){
+ const removed=s.shots.pop();if(!removed)return null;
+ s.target=removed.target;s.ended=false;s.stopped=false;
+ s.score=s.shots.reduce((sum,p)=>sum+p.points,0);
+ s.streak=s.shots.length?s.shots[s.shots.length-1].streak:0;
+ s.best=s.shots.reduce((best,p)=>Math.max(best,p.streak),0);
+ return removed;}
  function stop(s){if(!s.ended){s.ended=true;s.stopped=true;}}
  function report(s){const n=s.shots.length,hits=s.shots.filter(p=>p.hit).length,inZone=s.shots.filter(p=>p.actual>=0).length,following=s.shots.filter(p=>p.afterMiss);
  return {n,hits,inZone,command:n?hits/n:null,best:s.best,comebacks:following.filter(p=>p.hit).length,following:following.length,score:s.score,passed:s.score>=s.goal,zones:zones.map((_,i)=>{const a=s.shots.filter(p=>p.target===i);return {attempts:a.length,hits:a.filter(p=>p.hit).length};})};}
- return {zones,levels,start,record,stop,report};
+ return {zones,levels,start,record,undo,stop,report};
 })();

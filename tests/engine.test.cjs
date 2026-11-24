@@ -8,3 +8,11 @@ const p=E.record(s,s.target,rng);assert.equal(p.points,100);assert.equal(p.after
 const r=E.report(s);assert.equal(r.hits,7);assert.equal(r.inZone,7);assert.equal(r.n,8);assert.equal(r.comebacks,1);assert.equal(r.score,2100);
 const stopped=E.start({cap:2,level:1},rng);E.stop(stopped);assert.equal(E.record(stopped,stopped.target,rng),null);assert.equal(E.report(stopped).command,null);
 console.log("Core gameplay tests passed.");
+const u=E.start({cap:3,level:0},rng);
+E.record(u,u.target,rng);const second=u.target;E.record(u,second,rng);
+const third=u.target;E.record(u,-1,rng);assert.equal(u.ended,true);
+assert.equal(E.undo(u).actual,-1);assert.equal(u.target,third);assert.equal(u.ended,false);assert.equal(u.score,300);assert.equal(u.streak,2);assert.equal(u.best,2);
+E.record(u,third,rng);assert.equal(u.ended,true);assert.equal(u.score,600);assert.equal(E.report(u).hits,3);
+E.undo(u);E.undo(u);assert.equal(u.target,second);assert.equal(u.score,100);assert.equal(u.streak,1);assert.equal(u.best,1);
+E.undo(u);assert.equal(u.score,0);assert.equal(E.undo(u),null);assert.equal(E.report(u).n,0);
+console.log("Undo and final pitch correction tests passed.");
