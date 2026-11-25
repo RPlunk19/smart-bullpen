@@ -13,3 +13,5 @@
 
 /* Beta 0.22.1: synchronized damage labels and cinematic controls. */
 .ringVisualFrame{position:relative;overflow:hidden}.damageFloat{position:absolute;top:24%;font-size:clamp(17px,4vw,30px);font-weight:950;color:#ffe6a2;text-shadow:0 2px 4px #111827,0 0 10px #c7492e;pointer-events:none;transform:translateX(-50%);z-index:3}.damageFloat.left{left:32%}.damageFloat.right{left:68%}.damageFloat.miss{color:#b9e8ff}.damageFloat[hidden],.counterReveal[hidden]{display:none!important}.awaitImpact>*{visibility:hidden}.arenaTop{flex-wrap:wrap}.ringQualityLabel select{max-width:155px}
+
+.damageFloat:not([hidden]){animation:damageRise 1.1s ease-out both}.damageFloat.counterFloat:not([hidden]){animation-name:counterRise}@keyframes damageRise{from{transform:translate(-50%,8px);opacity:1}to{transform:translate(-50%,-22px);opacity:.85}}@keyframes counterRise{from{transform:translate(-50%,8px);opacity:1}to{transform:translate(-50%,-22px);opacity:.85}}@media(prefers-reduced-motion:reduce){.damageFloat{animation:none!important}}

@@ -36,9 +36,9 @@ export function createRingScene(canvas,{onFailure}={}){
    if(closed||ticket!==serial)return false;ready=true;resize();return true;
   }catch(e){if(ticket===serial&&!closed){clear();throw e;}return false;}
  }
- function draw(t){if(closed||!ready||!current||document.hidden)return;const poses=exchangePose(current,entry,t);
+ function draw(t){if(closed||!ready||!current||document.hidden)return;const poses=exchangePose(current,entry,t);const shields=current.before?RingTiming.shields(current.before,current.fighters,entry,t):current.fighters.map(q=>q.shield);
   for(let i=0;i<actors.length;i++){const a=actors[i],p=poses[i],side=i===0?-1:1;const x=side*(1.55-p.strike*.48)+p.stance*.25;
-   a.holder.position.set(x,.38-p.ko*.15,-p.windup*.12);a.holder.rotation.y=side===-1?.87:-.87;a.holder.rotation.z=side*(p.impact*.14+p.ko*.85);a.shield.visible=p.shield&&!p.ko;
+   a.holder.position.set(x,.38-p.ko*.15,-p.windup*.12);a.holder.rotation.y=side===-1?.87:-.87;a.holder.rotation.z=side*(p.impact*.14+p.ko*.85);a.shield.visible=(shields[i]>0||!!(entry&&i!==entry.hit.side&&entry.hit.shielded&&t>=.20&&t<.40)||!!(entry&&i===entry.hit.side&&entry.counter?.shielded&&t>=.70&&t<.90))&&!p.ko;
    if(a.robot)poseBoss(a.rig,p);else a.rig.battlePose(p.strike,p.impact);
    a.sparks.visible=p.impact>.02;for(let j=0;j<a.sparks.children.length;j++){const sp=a.sparks.children[j],angle=j*Math.PI/4,r=.12+p.impact*.48;sp.position.set(Math.cos(angle)*r,Math.sin(angle)*r,0);sp.scale.setScalar(.6+p.impact);}
   }renderer.render(scene,camera);
