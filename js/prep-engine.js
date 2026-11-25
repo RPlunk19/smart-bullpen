@@ -1,16 +1,110 @@
 /* Pure time and bullpen planning functions. */
 const Prep = (function createPrep(){
  const stages=[
- {name:"Readiness check",from:60,to:55,kind:"Recovery",tasks:["Check arm readiness, recent throwing workload and required rest with your coach.","Confirm game time, catcher availability and the day's pitch plan.","Drink water; check cleats and equipment. No throwing if pain or unusual fatigue is present."]},
- {name:"Dynamic warm-up",from:55,to:47,kind:"Movement",tasks:["2 min easy jog, skips and lateral shuffle.","2 min walking lunges with rotation (5/side) and lateral lunges (5/side).","2 min leg swings forward/lateral (8 each/leg) and hip openers (5/side).","2 min thoracic rotations (6/side), arm circles (8 each direction), then 2 short progressive accelerations if space permits."]},
- {name:"Arm activation",from:47,to:41,kind:"Movement",tasks:["Light band rows and external/internal rotation at side: 1 × 8–10 each, easy resistance.","Scapular wall slides or standing reaches: 1 × 8.","Gentle wrist/forearm movement and 5 controlled shadow deliveries. No fatigue, forced stretching or unfamiliar drills."]},
- {name:"Progressive catch",from:41,to:35,kind:"Throwing",tasks:["Start at a comfortable short distance, e.g. 20–30 ft for younger players or 30–45 ft for older players.","Easy throws at roughly 40–50% perceived intent; gradually back up toward normal pitching distance as tolerated.","Focus on rhythm, relaxed arm action and smooth catch. Take rests as needed; no required throw total."]},
- {name:"Extension & return",from:35,to:28,kind:"Throwing",tasks:["If accustomed to long toss, extend in small increments within your normal comfortable range. Otherwise continue easy catch.","Older pitchers may use a familiar 60–90 ft progression; younger pitchers can stay at a shorter comfortable distance. These are examples, not distance targets.","Return to normal pitching distance with smooth, controlled throws. No max-distance throws or max-effort pull-downs."]},
- {name:"Hydrate & reset",from:28,to:24,kind:"Recovery",tasks:["Water, relaxed breathing, check arm response and confirm readiness.","Discuss first-inning plan with catcher and coach. Stop if pain or unusual fatigue develops.","Set up the mound and agree on the bullpen cap before throwing."]},
- {name:"Programmed bullpen",from:24,to:8,kind:"Bullpen",tasks:["Begin with comfortable mound fastballs, then progress to familiar secondary pitches and game-location calls.","Take normal recovery between pitches and a short water/rest break between blocks as needed.","Stop when ready or at the agreed cap, whichever comes first. Never rush to finish the program."]},
- {name:"Competition transition",from:8,to:0,kind:"Ready",tasks:["Water as needed; stay warm with a jacket and light movement.","Review first batter, first-pitch plan, breathing and one simple cue.","Coordinate permitted on-field warm-up pitches with the coach. If pitching later (e.g. away team), adjust the plan around actual mound entry."]}
- ];
+  {
+    "name": "Readiness check",
+    "from": 60,
+    "to": 57,
+    "kind": "Recovery",
+    "tasks": [
+      "Confirm eligibility, arm readiness and recent workload with your coach. Hydrate and check equipment. Stop for pain or unusual fatigue."
+    ]
+  },
+  {
+    "name": "Dynamic warm-up",
+    "from": 57,
+    "to": 50,
+    "kind": "Movement",
+    "tasks": [
+      "2 min easy jog, skips and lateral shuffle.",
+      "2 min walking lunges with rotation and lateral lunges (5 each side).",
+      "2 min leg swings and hip openers.",
+      "1 min thoracic rotations and arm circles; short accelerations if appropriate."
+    ]
+  },
+  {
+    "name": "Jaeger J-Bands",
+    "from": 50,
+    "to": 42,
+    "kind": "Movement",
+    "tasks": [
+      "Secure the anchor away from the line of the face. Use light resistance; junior bands for ages 12 and under.",
+      "Over-the-head forearm extensions: 10 reps. Side and diagonal extensions: gentle 15–20 sec per side each.",
+      "Forward flies and reverse flies: 10 each.",
+      "Internal and external rotation at hip height: 10 each.",
+      "Elevated internal and external rotation: 10 each.",
+      "Reverse throwing and forward throwing motion: 10 each. Smooth controlled reps; stop before fatigue. Reduced pregame dose, not the full Jaeger conditioning prescription."
+    ]
+  },
+  {
+    "name": "PlyoCare preparation",
+    "from": 42,
+    "to": 33,
+    "kind": "Throwing",
+    "tasks": [
+      "Follow the selected coach-approved plan. Only familiar drills and weights, at easy to moderate intent, into a suitable wall/net.",
+      "No max-effort or velocity work. Stop before fatigue; do not introduce weighted balls on game day.",
+      "If none selected, use light mobility, shadow deliveries or rest. Do not add throws to fill the time."
+    ]
+  },
+  {
+    "name": "Progressive catch",
+    "from": 33,
+    "to": 28,
+    "kind": "Throwing",
+    "tasks": [
+      "Start short with a regulation baseball. Gradually build comfortable distance and intent. Rest as needed."
+    ]
+  },
+  {
+    "name": "Extension & return",
+    "from": 28,
+    "to": 23,
+    "kind": "Throwing",
+    "tasks": [
+      "Extend within the athlete's established comfortable range if accustomed to long toss, then return to pitching distance. No max-distance throws or high-intent pull-downs."
+    ]
+  },
+  {
+    "name": "Hydrate & reset",
+    "from": 23,
+    "to": 20,
+    "kind": "Recovery",
+    "tasks": [
+      "Drink water, check arm response, and review the first-inning plan with catcher and coach."
+    ]
+  },
+  {
+    "name": "Programmed bullpen",
+    "from": 20,
+    "to": 6,
+    "kind": "Bullpen",
+    "tasks": [
+      "Start with comfortable fastballs, progress to familiar secondary pitches and game locations.",
+      "Take normal recovery and short water breaks. Stop when ready or at the agreed cap; never rush."
+    ]
+  },
+  {
+    "name": "Competition transition",
+    "from": 6,
+    "to": 0,
+    "kind": "Ready",
+    "tasks": [
+      "Stay warm, hydrate, review first-batter plan and coordinate permitted on-field warm-ups. Adjust timing for actual mound entry if needed."
+    ]
+  }
+];
  const profiles={youth:{label:"Youth starter (9–12)",cap:12,max:15},junior:{label:"Junior starter (13–14)",cap:16,max:20},high:{label:"High school starter (15–18)",cap:20,max:25},adult:{label:"Adult starter",cap:20,max:30}};
+ function plyoPlan(profile,mode,heavy){
+ if(mode==="none")return [];
+ if(!["high","adult"].includes(profile))throw Error("Weighted-ball preset unavailable for this age profile.");
+ if(!["short","full"].includes(mode)||![1500,2000].includes(heavy))throw Error("Invalid PlyoCare selection.");
+ const row=(name,weights,reps)=>({name,weights,reps,total:weights.length*reps});
+ const r=mode==="short"?3:5,light=[450,225,150,100];
+ const rows=[row("Reverse throws",[heavy,1000],r),row("Pivot pickoffs",[1000,450],r)];
+ if(mode==="full")rows.push(row("Step backs",light,1),row("Drop steps",light,1));
+ rows.push(row("Walking windups",light,1));return rows;
+ }
  function timeState(target,now){
   const ms=target-now,remaining=Math.max(0,Math.ceil(ms/1000));
   const active=ms>60*60000?-1:ms<=0?stages.length:stages.findIndex(s=>ms<=s.from*60000&&ms>s.to*60000);
@@ -24,5 +118,5 @@ const Prep = (function createPrep(){
   const targets=["Glove-side","Arm-side","Low middle","Glove-side","Arm-side"];
   return groups.map((g,j)=>({...g,calls:Array.from({length:g.count},(_,i)=>({pitch:j===0||!secondary.length||i%2===0?"Fastball":secondary[Math.floor(i/2)%secondary.length],target:j===0?"Comfortable catcher target":targets[i%targets.length],delivery:j===2&&i%2===1?"Stretch":"Usual delivery"}))}));
  }
- return {stages,profiles,timeState,bullpen};
+ return {stages,profiles,timeState,bullpen,plyoPlan};
 })();
