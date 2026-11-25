@@ -27,7 +27,7 @@ function draw(player,container,previewId=null){
  const number=node("text",{x:141,y:176,"text-anchor":"middle","font-size":25,"font-weight":"900",fill:gear.jersey.id==="forge-jersey"||gear.jersey.id==="purple-jersey"?"#fff4bf":"#24334b",stroke:"none","font-family":"system-ui"});number.textContent=p.number;svg.append(number);
  rect(83,194,74,10,"#2a3548",2);
  rect(107,92,26,23,skin,7);
- if(gear.necklace.color!=="none"){path("M91 111 Q120 157 149 111","none",gear.necklace.color,5);if(["comeback-chain","ice-chain","relic-chain","flame-chain"].includes(gear.necklace.id))path("M120 139 l8 9 -8 9 -8 -9 Z",gear.necklace.color,"#527187",1);if(gear.necklace.id==="gold-chain"){for(let i=0;i<7;i++){const x=97+i*7,y=118+Math.sin(i*Math.PI/6)*15;ellipse(x,y,3,2,"#ffeb9a");}}}
+ if(gear.necklace.color!=="none"){path("M91 111 Q120 157 149 111","none",gear.necklace.color,5);if(["comeback-chain","ice-chain","relic-chain","flame-chain","robot-omega"].includes(gear.necklace.id))path("M120 139 l8 9 -8 9 -8 -9 Z",gear.necklace.color,"#527187",1);if(gear.necklace.id==="gold-chain"){for(let i=0;i<7;i++){const x=97+i*7,y=118+Math.sin(i*Math.PI/6)*15;ellipse(x,y,3,2,"#ffeb9a");}}}
  ellipse(87,67,9,13,skin);ellipse(153,67,9,13,skin);
  path("M87 47 Q89 24 120 24 Q151 24 153 47 L151 83 Q146 102 120 107 Q94 102 89 83 Z",skin);
  path("M87 51 Q80 24 109 19 Q142 14 154 43 L151 52 Q133 40 110 47 Z",gear.hair.color);
