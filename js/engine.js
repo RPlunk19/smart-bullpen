@@ -14,7 +14,7 @@ const Bullpen = (function makeEngine(){
  function start(settings,rng=Math.random){if(!Number.isInteger(settings.cap)||settings.cap<1||settings.cap>30||!levels[settings.level])throw Error("Invalid setup");const pitch=settings.pitch||"Fastball";
  const allowed=[...new Set(settings.allowed||[])].filter(p=>pitchTypes.includes(p));
  if(pitch==="Mixed"?allowed.length<2:!pitchTypes.includes(pitch))throw Error("Choose at least two allowed pitches for a mixed session.");
- const s={settings:{...settings,pitch,allowed},goal:levels[settings.level].goal,target:choose(-1,rng),pitchBag:[],currentPitch:null,replayNext:null,shots:[],score:0,streak:0,best:0,ended:false,stopped:false};
+ const s={settings:{...settings,pitch,allowed},goal:settings.campaignGoal??levels[settings.level].goal,target:choose(-1,rng),pitchBag:[],currentPitch:null,replayNext:null,shots:[],score:0,streak:0,best:0,ended:false,stopped:false};
  s.currentPitch=drawPitch(s,rng);return s;}
  function record(s,actual,rng=Math.random){if(s.ended||s.shots.length>=s.settings.cap||!Number.isInteger(actual)||actual< -1||actual>8)return null;
  const target=s.target,hit=actual===target,afterMiss=s.shots.length>0&&!s.shots[s.shots.length-1].hit;
@@ -22,7 +22,7 @@ const Bullpen = (function makeEngine(){
  const mult=Math.min(s.streak,5),pick=hit?Math.floor(rng()*2):0,points=hit?100*mult:0;
  const shot={number:s.shots.length+1,target,pitch:s.currentPitch,actual,hit,afterMiss,points,streak:s.streak,prize:hit?prizes[mult-1][pick]:null,icon:hit?icons[mult-1][pick]:null};
  s.shots.push(shot);s.score+=points;
- if(s.shots.length===s.settings.cap){s.ended=true;s.replayNext=null;}
+ if(s.shots.length===s.settings.cap||(s.settings.campaignGoal&&s.score>=s.goal)){s.ended=true;s.replayNext=null;}
  else if(s.replayNext){s.target=s.replayNext.target;s.currentPitch=s.replayNext.pitch;s.replayNext=null;}
  else{s.target=choose(target,rng);s.currentPitch=drawPitch(s,rng);}
  return shot;}
