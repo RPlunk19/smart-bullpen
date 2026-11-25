@@ -1,0 +1,8 @@
+# Beta 0.16 — Design Lab
+Experimental standalone WebGL test page. Existing game engines, settings, player storage, rewards, and 2D/Canvas rendering are unchanged; only home navigation adds a link. No software installation required for users. 
+## Dependency
+Vendored Three.js r180 (MIT): https://github.com/mrdoob/three.js/tree/r180 . The two minified build modules and license are copied from the tagged source; GLTFLoader and BufferGeometryUtils have their bare three import redirected to the local module. r180 is a pinned baseline, not the latest release (r187 lacked minified distributions in its GitHub build directory). No CDN, analytics, new permissions or uploads. Only the separate lab allows same-origin and data URI asset loading; playable pages retain their existing CSP. A dependency security review and upgrade strategy remain required before public release.
+## Scope
+Reusable WebGL renderer, perspective camera, standard physically based materials, lighting presets, dynamic shadows, quality levels and explicit model disposal. Articulated prototype Scout and player plus a tiny original glTF crystal proving local model loading. Idle, attack, KO, rotation, pause, reduced-motion and classic fallback. Models are test assets, not production artwork or real skeletal rigs. No player data read or written.
+## Verification
+Static JS/HTML and glTF buffer checks; browser WebGL, import execution, context loss, actual FPS and phone/tablet testing are outstanding. On iPhone/iPad and desktop, test robot/player/crystal, lighting, rotation, quality, animations, pause, Home, and existing games. Use Low if needed. No athlete throws required.
