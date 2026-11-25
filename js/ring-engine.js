@@ -3,7 +3,7 @@ const Ring=(function ring(){
  const zones=["Left guard","Head guard","Right guard","Left arm","Chest plate","Right arm","Left hip","Core guard","Right hip"],factors=[1,.65,.35,.2];
  const clone=x=>JSON.parse(JSON.stringify(x)),pick=(a,r)=>a[Math.floor(r()*a.length)],range=()=>Array.from({length:9},(_,i)=>i);
  const damage=(base,wear,weak)=>Math.max(1,Math.round(base*factors[Math.min(wear,3)]*(weak?1.5:1)));
- function fighter(name,max,weak,mask,parts){return {name,max,hp:max,weak,mask:mask.slice(),parts:parts.slice(),wear:Array(9).fill(0),partWear:Array(9).fill(0),partAt:range(),weakPart:weak,guard:null,broken:[],stance:0,n:0,hits:0,best:0,streak:0,comebacks:0,last:null,dealt:0};}
+ function fighter(name,max,weak,mask,parts){return {name,max,hp:max,weak,mask:mask.slice(),parts:parts.slice(),wear:Array(9).fill(0),partWear:Array(9).fill(0),partAt:range(),weakPart:weak,guard:null,broken:[],stance:0,shield:0,recovered:0,prevented:0,powerups:0,n:0,hits:0,best:0,streak:0,comebacks:0,last:null,dealt:0};}
  function validMask(mask){return Array.isArray(mask)&&mask.length>=2&&mask.every(x=>Number.isInteger(x)&&x>=0&&x<9)&&new Set(mask).size===mask.length;}
  function available(s,i){const d=s.fighters[1-i];return d.mask.filter(z=>!(s.mode==="solo"&&i===0&&((s.boss.ability==="guard"&&z===d.guard)||(s.boss.ability==="armor"&&d.broken.length<2&&z===s.boss.core))));}
  function call(s,i,r){if(!s.bags[i].length)s.bags[i]=s.pitches.slice();return {zone:pick(available(s,i).filter(x=>x!==s.previous[i]),r),pitch:s.bags[i].splice(Math.floor(r()*s.bags[i].length),1)[0]};}
@@ -12,10 +12,11 @@ const Ring=(function ring(){
  const weakPool=mode==="solo"&&boss.ability==="agility"?mask.filter(z=>z%3===1):mode==="solo"&&boss.ability==="armor"?mask.filter(z=>z!==boss.core):mask;
  const s={mode,boss,cap,pitches:pitches.slice(),fighters:[fighter(names[0],100,pick(range(),r),range(),zones),fighter(names[1],mode==="solo"?boss.hp:100,pick(weakPool,r),mask,parts)],turn:0,previous:[-1,-1],bags:[[],[]],log:[],history:[],replay:null,result:null};s.call=call(s,0,r);return s;}
  function attack(s,i,actual,target,pitch,power){
- const a=s.fighters[i],b=s.fighters[1-i],special=s.mode==="solo"&&i===0?s.boss.ability:"none",occupied=b.mask.includes(actual),blocked=occupied&&special==="armor"&&actual===s.boss.core&&b.broken.length<2,guarded=occupied&&special==="guard"&&actual===b.guard,exact=occupied&&!blocked&&actual===target,core=occupied&&special==="armor"&&actual===s.boss.core&&!blocked,weak=occupied&&actual===b.weak,empty=actual>=0&&!occupied;let amount=0;
- if(occupied&&!blocked){amount=Math.min(b.hp,Math.max(1,Math.round(damage(exact?power:Math.max(1,Math.round(power*.21)),b.wear[actual],weak||core)*(guarded?.5:1))));b.partWear[b.partAt[actual]]++;b.wear[actual]++;b.hp-=amount;if(special==="armor"&&exact&&actual!==s.boss.core&&!b.broken.includes(actual))b.broken.push(actual);}
+ const a=s.fighters[i],b=s.fighters[1-i],special=s.mode==="solo"&&i===0?s.boss.ability:"none",occupied=b.mask.includes(actual),blocked=occupied&&special==="armor"&&actual===s.boss.core&&b.broken.length<2,guarded=occupied&&special==="guard"&&actual===b.guard,exact=occupied&&!blocked&&actual===target,core=occupied&&special==="armor"&&actual===s.boss.core&&!blocked,weak=occupied&&actual===b.weak,empty=actual>=0&&!occupied;let amount=0,absorbed=0;const shielded=b.shield>0;if(shielded)b.shield--;
+ if(occupied&&!blocked){const raw=Math.max(1,Math.round(damage(exact?power:Math.max(1,Math.round(power*.21)),b.wear[actual],weak||core)*(guarded?.5:1)));amount=Math.min(b.hp,shielded?Math.ceil(raw/2):raw);absorbed=Math.min(b.hp,raw)-amount;b.prevented+=absorbed;b.partWear[b.partAt[actual]]++;b.wear[actual]++;b.hp-=amount;if(special==="armor"&&exact&&actual!==s.boss.core&&!b.broken.includes(actual))b.broken.push(actual);}
  a.n++;a.hits+=Number(exact);a.streak=exact?a.streak+1:0;a.best=Math.max(a.best,a.streak);if(exact&&a.last===false)a.comebacks++;a.last=exact;a.dealt+=amount;
- return {side:i,actual,target,pitch,exact,weak,empty,blocked,guarded,core,amount};}
+ let reward=null;const human=s.mode==="duel"||i===0;if(human&&exact&&a.hp>0){if(a.streak===3){a.shield=Math.max(a.shield,2);a.powerups++;reward={kind:"shield",amount:2};}else if(a.streak===5){const healed=Math.min(15,a.max-a.hp);a.hp+=healed;a.recovered+=healed;a.powerups++;reward={kind:"heal",amount:healed};}}
+ return {side:i,actual,target,pitch,exact,weak,empty,blocked,guarded,core,amount,shielded,absorbed,reward};}
  function advanceAbility(s,hit,r){const b=s.fighters[1];if(s.boss.ability==="guard")b.guard=b.mask.includes(hit.actual)?hit.actual:pick(b.mask.filter(z=>z!==b.guard),r);
  if(s.boss.ability==="agility"){b.stance=pick([-1,0,1].filter(x=>x!==b.stance),r);b.mask=[];b.parts=Array(9).fill(null);b.partAt=Array(9).fill(-1);b.wear=Array(9).fill(0);
  for(const z of s.boss.mask){const col=z%3+b.stance;if(col<0||col>2)continue;const dest=z+b.stance;b.mask.push(dest);b.parts[dest]=s.boss.parts[z];b.partAt[dest]=z;b.wear[dest]=b.partWear[z];if(z===b.weakPart)b.weak=dest;}}
@@ -28,6 +29,6 @@ const Ring=(function ring(){
  const entry={hit,counter,tape,defender};s.log.push(entry);return entry;}
  function undo(s){const e=s.log.at(-1),old=s.history.pop();if(!e||!old)return false;const history=s.history;Object.assign(s,old,{history,replay:e.tape});return true;}
  function stop(s){if(!s.result)s.result="stopped";}
- function report(s,i=0){const p=s.fighters[i];return {n:p.n,hits:p.hits,best:p.best,comebacks:p.comebacks,command:p.n?p.hits/p.n:0,hp:p.hp,damage:p.dealt,emptyMisses:s.log.filter(x=>x.hit.side===i&&x.hit.empty).length,victory:s.mode==="solo"&&s.result==="win",duelWin:s.mode==="duel"&&s.result===(i===0?"p1":"p2")};}
+ function report(s,i=0){const p=s.fighters[i];return {n:p.n,hits:p.hits,best:p.best,comebacks:p.comebacks,command:p.n?p.hits/p.n:0,hp:p.hp,damage:p.dealt,shield:p.shield,recovered:p.recovered,prevented:p.prevented,powerups:p.powerups,emptyMisses:s.log.filter(x=>x.hit.side===i&&x.hit.empty).length,victory:s.mode==="solo"&&s.result==="win",duelWin:s.mode==="duel"&&s.result===(i===0?"p1":"p2")};}
  return {zones,factors,damage,start,record,undo,stop,report,available,abilityStatus,counterStats};
 })();
