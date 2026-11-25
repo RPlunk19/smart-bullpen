@@ -1,0 +1,44 @@
+/* Original probabilistic baseball simulation, not a calibrated MLB prediction model. */
+const AtBats=(()=>{
+const pitches=["Fastball","Changeup","Curveball","Slider","Cutter","Sinker"],caps=[10,15,20,30,50],zones=["Upper left","Upper middle","Upper right","Middle left","Middle middle","Middle right","Lower left","Lower middle","Lower right","Above","Below","Off left","Off right"],levels=["Rookie","Pro","All-Star"],clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),copy=x=>JSON.parse(JSON.stringify(x));
+const hitters=[
+{name:"Evan Reed",hand:"R",style:"Aggressive leadoff",hint:"Attacks early velocity and likes to extend his arms. Will expand late in the count.",fav:["Fastball","Sinker"],weak:["Changeup"],hot:[2,5],chase:.15,contact:.04},
+{name:"Miles Cruz",hand:"L",style:"Patient contact hitter",hint:"Rarely offers at marginal pitches early. Comfortable against slow stuff; less comfortable changing eye level.",fav:["Changeup","Curveball"],weak:["Fastball"],hot:[4,7],chase:-.10,contact:.10},
+{name:"Jordan King",hand:"R",style:"Pull-side power",hint:"Looks to turn on pitches near his hands. Can get anxious when forced to protect the outer half.",fav:["Fastball","Cutter"],weak:["Slider"],hot:[0,3,6],chase:.03,contact:.02,power:.10},
+{name:"Noah Vega",hand:"L",style:"Low-ball slugger",hint:"Does damage when the ball stays down in his swing path. Has difficulty catching up at a different eye level.",fav:["Sinker","Changeup"],weak:["Fastball"],hot:[6,7,8],chase:.05,power:.12},
+{name:"Alex Brooks",hand:"R",style:"Breaking-ball hunter",hint:"Recognizes spin early and stays back well. A change of speed or elevation can disrupt timing.",fav:["Slider","Curveball"],weak:["Fastball"],hot:[4,5],chase:.01,contact:.07},
+{name:"Sam Ellis",hand:"L",style:"Two-strike grinder",hint:"Protects the plate with two strikes. Does not chase much, but can be jammed.",fav:["Fastball","Changeup"],weak:["Cutter"],hot:[3,4],chase:-.08,contact:.13},
+{name:"Drew Park",hand:"R",style:"Free swinger",hint:"Wants to swing and can be tempted beyond the zone. Punishes pitches left over the middle.",fav:["Fastball"],weak:["Curveball","Slider"],hot:[1,4,7],chase:.19,power:.04},
+{name:"Casey Lane",hand:"L",style:"Opposite-field contact",hint:"Uses the whole field and tracks pitches away. Hard pitches near the hands can disrupt the barrel.",fav:["Changeup","Sinker"],weak:["Cutter"],hot:[0,3,6],chase:-.03,contact:.08},
+{name:"Taylor Moss",hand:"R",style:"Streaky hitter",hint:"Adjusts quickly if a pitcher repeats the same look. Less settled against varied speed and location.",fav:["Fastball"],weak:["Changeup"],hot:[1,4,5],chase:.08,power:.05}];
+const presets={clean:{outs:0,bases:[false,false,false]},jam:{outs:1,bases:[true,true,false]},loaded:{outs:2,bases:[true,true,true]}};
+function start({names,cap=20,level="Pro",scenario="clean",innings=1,arsenals}){if(!Array.isArray(names)||![1,2].includes(names.length)||!caps.includes(cap)||!levels.includes(level)||!presets[scenario]||![1,2,3].includes(innings)||!Array.isArray(arsenals)||arsenals.length!==names.length||arsenals.some(a=>!Array.isArray(a)||!a.length||a.some(p=>!pitches.includes(p))))throw Error("Invalid game settings");return {names:names.map(String),cap,level,scenario,innings,arsenals:arsenals.map(a=>[...new Set(a)]),turn:0,frames:names.map(()=>({inning:1,...copy(presets[scenario]),balls:0,strikes:0,batter:0,pa:[],runs:0,hits:0,walks:0,ks:0,outsMade:0,n:0,completed:0,done:false})),call:null,log:[],stopped:false,result:null,replay:null};}
+function current(s){return s.frames[s.turn];}
+function hitter(s){return hitters[current(s).batter%hitters.length];}
+function call(s,pitch,target){if(s.result||s.call||!s.arsenals[s.turn].includes(pitch)||!Number.isInteger(target)||target<0||target>=zones.length)return false;s.call={pitch,target};return true;}
+function quality(s,actual){const q=current(s),h=hitter(s),c=s.call,inZone=actual<9,repeat=q.pa.slice(-2).filter(x=>x.pitch===c.pitch).length,hot=h.hot.includes(actual),fav=h.fav.includes(c.pitch),weak=h.weak.includes(c.pitch),center=actual===4,exact=actual===c.target;
+const predictable=repeat*.10,selection=(fav?.13:0)-(weak?.10:0)+predictable+(q.balls===3&&c.target>=9?.10:0),execution=(center?.18:0)+(hot?.13:0)+(exact?-.05:.07);
+const danger=clamp(.22+selection+execution+(h.power||0)+(s.level==="All-Star"?.10:s.level==="Rookie"?-.10:0),.03,.85);
+const swing=inZone?clamp(.62+(q.strikes===2?.17:0)+(q.balls===3?-.14:0)+(fav?.07:0),.35,.95):clamp(.19+h.chase+(q.strikes===2?.16:0)-(q.balls===3?.16:0)+(weak?.05:0),.02,.68);
+const miss=clamp(.38-danger*.35+(weak?.08:0)+(inZone?0:.18)-(h.contact||0)-(q.strikes===2?.04:0),.07,.70);
+return {danger,swing,miss,exact,hot,fav,weak,repeat,inZone};}
+function walk(q){let carry=true;for(let i=0;i<3&&carry;i++){const occupied=q.bases[i];q.bases[i]=true;carry=occupied;}if(carry)q.runs++;q.walks++;}
+function hit(q,n){const old=q.bases.slice();q.bases=[false,false,false];for(let i=2;i>=0;i--)if(old[i]){if(i+n>=3)q.runs++;else q.bases[i+n]=true;}if(n===4)q.runs++;else q.bases[n-1]=true;q.hits++;}
+function nextPA(q){q.balls=0;q.strikes=0;q.batter=(q.batter+1)%hitters.length;q.pa=[];}
+function finishFrame(s,q){if(q.outs>=3){q.completed++;if(q.inning>=s.innings)q.done=true;else if(q.n<s.cap){q.inning++;q.outs=0;q.bases=[false,false,false];}}if(q.n>=s.cap)q.done=true;if(q.done){const other=s.frames.findIndex((x,i)=>i!==s.turn&&!x.done);if(other>=0)s.turn=other;else s.result="complete";}}
+function record(s,actual,rng=Math.random){if(!s.call||s.result||!Number.isInteger(actual)||actual<0||actual>=zones.length)return null;const before={frames:copy(s.frames),turn:s.turn,call:copy(s.call),result:s.result},q=current(s),h=hitter(s),c=s.call,k=quality(s,actual),rolls=s.replay||Array.from({length:4},rng);s.replay=null;const oldRuns=q.runs,oldOuts=q.outs;let outcome,paEnd=false;
+if(rolls[0]>=k.swing){outcome=k.inZone?"Called strike":"Ball";}
+else if(rolls[1]<k.miss)outcome="Swinging strike";
+else if(rolls[2]<.23)outcome="Foul";
+else if(rolls[3]<k.danger){const u=rolls[2];const bases=u>.91&&k.danger>.38?4:u>.78?2:u>.72&&k.danger>.5?3:1;hit(q,bases);outcome=["","Single","Double","Triple","Home run"][bases];paEnd=true;}
+else{q.outs++;q.outsMade++;outcome="Ball in play • out";paEnd=true;}
+if(outcome==="Ball"){q.balls++;if(q.balls===4){walk(q);outcome="Walk";paEnd=true;}}
+if(outcome==="Called strike"||outcome==="Swinging strike"){q.strikes++;if(q.strikes===3){q.outs++;q.outsMade++;q.ks++;outcome="Strikeout";paEnd=true;}}
+if(outcome==="Foul"&&q.strikes<2)q.strikes++;
+q.n++;const e={player:s.turn,inning:q.inning,batter:h.name,pitch:c.pitch,target:c.target,actual,outcome,runs:q.runs-oldRuns,outs:q.outs-oldOuts,exact:k.exact,selection:k.fav||k.repeat>=2?"Risky matchup / repeated look":k.weak?"Disrupted hitter preference":"Neutral matchup",execution:k.exact?"Hit called spot":actual===4?"Missed over heart":actual>=9?"Missed outside zone":"Missed called spot",before,rolls};
+q.pa.push({pitch:c.pitch,target:c.target,actual});if(paEnd)nextPA(q);s.call=null;s.log.push(e);finishFrame(s,q);return e;}
+function undo(s){if(!s.log.length||s.replay)return false;const e=s.log.pop();s.frames=copy(e.before.frames);s.turn=e.before.turn;s.call=copy(e.before.call);s.result=e.before.result;s.replay=e.rolls.slice();return true;}
+function stop(s){if(s.replay)return false;s.stopped=true;s.result="stopped";s.call=null;return true;}
+function report(s){const rows=s.frames.map((q,i)=>{const log=s.log.filter(e=>e.player===i);return {name:s.names[i],n:q.n,runs:q.runs,hits:q.hits,walks:q.walks,ks:q.ks,outs:q.outsMade,completed:q.completed,exact:log.filter(e=>e.exact).length,strikes:log.filter(e=>e.actual<9).length,complete:q.completed===s.innings};});let winner=null;if(s.names.length===2&&s.result==="complete"&&rows.every(r=>r.complete)){if(rows[0].runs!==rows[1].runs)winner=rows[0].runs<rows[1].runs?0:1;}return {rows,winner,draw:s.names.length===2&&rows.every(r=>r.complete)&&rows[0].runs===rows[1].runs};}
+return {pitches,caps,zones,levels,hitters,presets,start,current,hitter,call,quality,record,undo,stop,report};
+})();
