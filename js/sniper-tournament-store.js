@@ -1,0 +1,28 @@
+/* Persistent tournament records, local day ledger, strict backup reconstruction. */
+const TournamentStore=(()=>{
+ const copy=x=>JSON.parse(JSON.stringify(x)),day=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+ const validDay=x=>typeof x==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(x),idOK=x=>typeof x==="string"&&/^[a-zA-Z0-9_-]{1,64}$/.test(x),uid=()=>crypto.randomUUID?.()||Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);
+ const ball={size:"Regulation",oz:5};
+ function create({name,ids,format,cap,teamSize},rng=Math.random){name=String(name||"").trim().slice(0,64);if(!name||!ids.every(idOK))throw Error("Enter a name and valid entrants.");const t=SniperTournament.create({ids,format,cap,budget:50,teamSize,multiDay:true});return {...t,id:uid(),name,created:day(),updated:day(),schedule:Array.from({length:cap},()=>({ball:{...ball},pitch:"Fastball",target:Math.floor(rng()*9)})),drafts:{},daily:{},archived:false,aborted:false,history:[],revision:0};}
+ function players(t,index,names={}){const m=t.matches[index];if(!m)throw Error("Invalid match");return [...t.entries[m.a],...t.entries[m.b]].map(id=>({id,name:names[id]||id,balls:[{...ball}],pitches:["Fastball"]}));}
+ function newMatch(t,index,names){return Sniper.start({mode:t.teamSize===1?"versus":"team",cap:t.cap,format:"mirror",schedule:t.schedule,players:players(t,index,names)});}
+ function eligible(t,index){return !t.archived&&!t.aborted&&t.champions===null&&!!t.matches[index]&&!t.matches[index].result;}
+ function total(t,id,date=null){let n=0;for(const h of t.history)for(const e of h.rows)if(e.id===id&&(!date||e.date===date))n++;for(const d of Object.values(t.drafts)){for(const e of d.rows)if(e.id===id&&(!date||e.date===date))n++;if(d.correction?.id===id&&(!date||d.correction.date===date))n++;}return n;}
+ function dailyTotal(list,id,date=day()){return list.reduce((n,t)=>n+total(t,id,date),0);}
+ function allowance(t,id,date=day()){return t.daily[date]?.[id]??null;}
+ function approve(t,id,remaining,list,date=day()){if(!t.entries.flat().includes(id)||!validDay(date)||!Number.isInteger(remaining)||remaining<0||remaining>50)throw Error("Enter an approved remaining allowance of 0–50.");t.daily[date]??={};t.daily[date][id]=dailyTotal(list,id,date)+remaining;}
+ function canThrow(t,s,list,date=day()){if(s.replay)return true;if(Sniper.ended(s))return false;const id=s.players[Sniper.current(s)].id,limit=allowance(t,id,date);return limit!==null&&dailyTotal(list,id,date)<limit;}
+ function checkpoint(t,index,s,rows){if(!eligible(t,index))throw Error("Match is not eligible.");t.drafts[index]={state:copy(s),rows:copy(rows)};t.updated=day();}
+ function finalize(t,index,s,rows){if(!eligible(t,index)||rows.length!==s.log.length||!SniperTournament.commit(t,index,s))return false;t.history.push({index,rows:copy(rows)});delete t.drafts[index];t.updated=day();return true;}
+ function exportData(t){return JSON.stringify({type:"smart-bullpen-tournament",version:1,tournament:t},null,2);}
+ // Rebuild from validated scored rows, never trust supplied totals, career counters or executable data.
+ function restore(raw){const t=raw?.tournament;if(raw?.type!=="smart-bullpen-tournament"||raw.version!==1||!t||!idOK(t.id)||typeof t.name!=="string"||!t.name.trim()||t.name.length>64||!Array.isArray(t.entries)||!validDay(t.created)||!validDay(t.updated)||!Array.isArray(t.history)||t.history.length>28||!Array.isArray(t.schedule)||t.schedule.length!==t.cap||t.schedule.some(c=>c?.ball?.size!=="Regulation"||c.ball.oz!==5||c.pitch!=="Fastball"||!Number.isInteger(c.target)||c.target<0||c.target>8))throw Error("Invalid tournament backup.");
+ const ids=t.entries.flat();if(!ids.every(idOK)||t.entries.some(e=>!Array.isArray(e)||e.length!==t.teamSize))throw Error("Invalid entrants.");
+ const out={...SniperTournament.create({ids,format:t.format,cap:t.cap,budget:50,teamSize:t.teamSize,multiDay:true}),id:t.id,name:t.name,created:t.created,updated:t.updated,schedule:copy(t.schedule),drafts:{},daily:{},history:[],archived:false,aborted:false,revision:Number.isSafeInteger(t.revision)&&t.revision>=0?t.revision:0};
+ function rebuild(index,rows,call,replay){if(!eligible(out,index)||!Array.isArray(rows)||rows.length>out.cap*out.teamSize*2)throw Error("Invalid saved match.");const s=newMatch(out,index);for(const e of rows){if(!validDay(e?.date)||!Number.isInteger(e.actual)||e.actual< -1||e.actual>8||s.players[Sniper.current(s)]?.id!==e.id)throw Error("Invalid pitch log.");Sniper.roll(s);if(!Sniper.record(s,e.actual))throw Error("Invalid pitch result.");}if(call){const c=Sniper.roll(s);if(!c||c.target!==call.target||c.player!==call.player)throw Error("Invalid pending assignment.");}if(replay){if(!call||!validDay(replay.date)||replay.id!==s.players[Sniper.current(s)].id)throw Error("Invalid correction.");s.replay=true;}return s;}
+ for(const h of t.history){const s=rebuild(h.index,h.rows,null,null);if(!finalize(out,h.index,s,h.rows))throw Error("Invalid completed match.");}
+ for(const [key,d] of Object.entries(t.drafts||{})){const index=Number(key);if(!Number.isInteger(index)||String(index)!==key||!d||Object.keys(out.drafts).length>=28)throw Error("Invalid draft.");const s=rebuild(index,d.rows,d.state?.call,d.correction);checkpoint(out,index,s,d.rows);if(d.correction)out.drafts[index].correction=copy(d.correction);}
+ // Allowances are deliberately not transferred. Coach must reconfirm on import.
+ out.archived=t.archived===true;out.aborted=t.aborted===true;out.updated=t.updated;return out;}
+ return {create,day,players,newMatch,eligible,total,dailyTotal,allowance,approve,canThrow,checkpoint,finalize,exportData,restore,copy};
+})();
