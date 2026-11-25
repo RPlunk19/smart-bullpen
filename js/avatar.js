@@ -2,9 +2,9 @@
 /* Original layered vector avatar; attributes are generated from validated local gear. */
 const Avatar=(()=>{
 const ns="http://www.w3.org/2000/svg",node=(tag,attrs)=>{const n=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,String(v)));return n;};
-function draw(player,container,previewId=null){
+function draw(player,container,previewId=null,hideGlove=false){
  const p=Clubhouse.sanitize(player),gear=Object.fromEntries(Clubhouse.slots.map(s=>[s,Clubhouse.items.find(i=>i.id===p.gear[s])])),skin=p.skin;
- const preview=Clubhouse.items.find(i=>i.id===previewId);if(preview)gear[preview.slot]=preview;
+ const preview=Clubhouse.items.find(i=>i.id===previewId);if(preview)gear[preview.slot]=preview;gear.hair={...gear.hair,id:preview?.slot==="hair"?preview.id:p.hairStyle,color:p.hairColor};
  const svg=node("svg",{viewBox:"0 0 240 310",role:"img","aria-label":p.name+" baseball avatar"});
  const add=(tag,a)=>svg.appendChild(node(tag,a)),path=(d,fill,stroke="#182436",sw=2)=>add("path",{d,fill,stroke,"stroke-width":sw,"stroke-linejoin":"round","stroke-linecap":"round"});
  const rect=(x,y,width,height,fill,rx=4)=>add("rect",{x,y,width,height,rx,fill,stroke:"#182436","stroke-width":2});
@@ -32,6 +32,7 @@ function draw(player,container,previewId=null){
  path("M87 47 Q89 24 120 24 Q151 24 153 47 L151 83 Q146 102 120 107 Q94 102 89 83 Z",skin);
  path("M87 51 Q80 24 109 19 Q142 14 154 43 L151 52 Q133 40 110 47 Z",gear.hair.color);
  if(gear.hair.id==="curls-hair")for(const [x,y] of [[86,48],[84,55],[154,48],[156,55]])ellipse(x,y,6,6,gear.hair.color);
+ if(gear.hair.id==="ponytail"){ellipse(155,78,10,26,gear.hair.color);}if(gear.hair.id==="bun"){ellipse(145,32,12,12,gear.hair.color);}
  if(["long-hair","blond-hair"].includes(gear.hair.id)){path("M87 47 Q75 65 78 93 L91 106 L90 74 Z",gear.hair.color);path("M153 47 Q165 65 162 93 L149 106 L150 74 Z",gear.hair.color);}
  ellipse(106,65,3,4,"#263141");ellipse(134,65,3,4,"#263141");path("M117 69 L114 77 L121 78","none","#8d6045",1.4);path("M108 88 Q120 96 132 88","none","#563b32",2);
  if(gear.eye.color!=="none"){line(96,77,111,79,gear.eye.color,4);line(129,79,144,77,gear.eye.color,4);if(gear.eye.id!=="classic-eye"){line(99,83,110,84,gear.eye.color,2);line(130,84,141,83,gear.eye.color,2);}if(gear.eye.id==="war-eye"){line(103,78,103,87,gear.eye.color,2);line(137,78,137,87,gear.eye.color,2);}}
@@ -39,7 +40,7 @@ function draw(player,container,previewId=null){
  path("M83 47 Q81 10 120 10 Q159 10 157 47 Q120 42 83 47 Z",gear.hat.color);
  path("M85 45 Q125 36 161 44 Q181 52 154 57 Q125 50 85 52 Z",gear.hat.color);
  line(120,13,120,38,"#f5d780",1.5);path("M112 23 L128 23 L128 33 L112 33 Z","#f2cd66","none",0);
- path("M177 173 Q198 157 206 174 L208 192 Q199 209 179 205 L171 191 Z",gear.glove.color);for(let i=0;i<3;i++)line(185+i*5,177,187+i*5,191,"#e1bd83",1.5);line(177,190,199,197,"#523b2c",2);
+ if(!hideGlove){path("M177 173 Q198 157 206 174 L208 192 Q199 209 179 205 L171 191 Z",gear.glove.color);for(let i=0;i<3;i++)line(185+i*5,177,187+i*5,191,"#e1bd83",1.5);line(177,190,199,197,"#523b2c",2);}
  container.replaceChildren(svg);
 }
 return {draw};
