@@ -8,7 +8,7 @@ export async function loadCandidate(kind){
  const gltf=await loader.loadAsync(new URL('../assets/rigged-candidates/'+kind+'.gltf',import.meta.url).href);
  const model=gltf.scene,root=new T.Group();root.add(model);model.updateMatrixWorld(true);
  const bones=new Map(),meshes=[];model.traverse(o=>{if(o.isBone)bones.set(o.name,o);if(o.isSkinnedMesh){meshes.push(o);o.frustumCulled=false;o.castShadow=true;o.receiveShadow=true;}});
- const required=['Head','spine_03','upperarm_l','upperarm_r','lowerarm_l','lowerarm_r','hand_l','hand_r'];if(required.some(n=>!bones.has(n))||!meshes.length)throw Error('Unsupported character rig');
+ const required=['Head','spine_03','upperarm_l','upperarm_r','lowerarm_l','lowerarm_r','hand_l','hand_r','foot_l','foot_r'];if(required.some(n=>!bones.has(n))||!meshes.length)throw Error('Unsupported character rig');
  const bounds=new T.Box3().setFromObject(model),size=bounds.getSize(new T.Vector3());if(!Number.isFinite(size.y)||size.y<.5||size.y>4)throw Error('Unexpected model scale');
  model.position.y=-bounds.min.y;
  const rest=new Map([...bones].map(([n,b])=>[n,b.quaternion.clone()]));
