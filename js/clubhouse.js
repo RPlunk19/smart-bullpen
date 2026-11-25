@@ -59,19 +59,30 @@ const Clubhouse = (function createClubhouse(C){
 ["necklace","flame-chain","Ember Pendant","4-4","#f28a43"],
 ["tape","gold-tape","Championship Gold Tape","5-4","#f3cf64"],
 ["glove","forge-glove","Forge Black & Orange Glove","4-2","#40313b"],
-["cleats","crystal-cleats","Crystal Ice Cleats","2-4","#83d4e9"]
+["cleats","crystal-cleats","Crystal Ice Cleats","2-4","#83d4e9"],
+["hat","robot-cap","Scout Circuit Cap","robot:r1","#227b91"],
+["tape","robot-tape","Electric Circuit Tape","robot:r1","#65e6e3"],
+["glove","robot-glove","Iron Defender Glove","robot:r2","#7188a5"],
+["necklace","robot-chain","Circuit Link Chain","robot:r2","#87d9e8"],
+["jersey","robot-jersey","Circuit Crusher Jersey","robot:r3","#674bb1"],
+["sleeve","robot-sleeve","Titan Tech Sleeve","robot:r4","#e56b45"],
+["cleats","robot-cleats","Titan Alloy Cleats","robot:r4","#627b91"],
+["glasses","robot-visor","Omega Gold Visor","robot:r5","#eac44f"],
+["necklace","robot-omega","Omega Core Pendant","robot:r5","#eac44f"],
+["jersey","robot-champ","Omega Champion Jersey","robot:r5","#26475b"]
  ].map(([slot,id,name,requirement,color])=>({slot,id,name,requirement,color}));
  const defaultGear=Object.fromEntries(slots.map(slot=>[slot,items.find(i=>i.slot===slot&&i.requirement==="starter").id]));
  const skins=["#f1c7a1","#d5a174","#b87a50","#925938","#69412f","#4e3028"];
  const flags=["combo","comeback","master"];
- function unlocked(p,item){return item.requirement==="starter"||flags.includes(item.requirement)?item.requirement==="starter"||Boolean(p.flags[item.requirement]):Boolean(p.progress[item.requirement]);}
- function sanitize(p){p=p&&typeof p==="object"?p:{};const progress=C.clean(p.progress),fs=Object.fromEntries(flags.map(k=>[k,p.flags?.[k]===true]));const result={id:typeof p.id==="string"?p.id.slice(0,64):"",name:typeof p.name==="string"?p.name.trim().slice(0,24):"Player",skin:skins.includes(p.skin)?p.skin:skins[1],number:Number.isInteger(p.number)&&p.number>=0&&p.number<=99?p.number:7,progress,flags:fs,gear:{...defaultGear}};
+ function unlocked(p,item){const req=item.requirement;if(req==="starter")return true;if(flags.includes(req))return Boolean(p.flags[req]);if(req.startsWith("robot:"))return Boolean(p.games.robot[req.slice(6)]);return Boolean(p.progress[req]);}
+ function sanitize(p){p=p&&typeof p==="object"?p:{};const progress=C.clean(p.games?.crate??p.progress),robot=GameCatalog.clean(p.games?.robot),fs=Object.fromEntries(flags.map(k=>[k,p.flags?.[k]===true]));const result={id:typeof p.id==="string"?p.id.slice(0,64):"",name:typeof p.name==="string"?p.name.trim().slice(0,24):"Player",skin:skins.includes(p.skin)?p.skin:skins[1],number:Number.isInteger(p.number)&&p.number>=0&&p.number<=99?p.number:7,progress,games:{crate:progress,robot},flags:fs,gear:{...defaultGear}};
  if(!result.name)result.name="Player";
  for(const slot of slots){const item=items.find(i=>i.id===p.gear?.[slot]&&i.slot===slot);if(item&&unlocked(result,item))result.gear[slot]=item.id;}return result;}
  function load(raw,legacy){const data=raw&&typeof raw==="object"?raw:{};let players=Array.isArray(data.players)?data.players.slice(0,32).map(sanitize).filter(p=>p.id):[];players=players.filter((p,i)=>players.findIndex(q=>q.id===p.id)===i);if(!players.length){const old=C.clean(legacy);players=[sanitize({id:"legacy",name:Object.keys(old).length?"Legacy Player":"Player 1",progress:old})];}return {players,active:players.some(p=>p.id===data.active)?data.active:players[0].id};}
- function career(p){const cleared=Object.keys(p.progress).length,stars=Object.values(p.progress).reduce((n,l)=>n+l.stars,0),worlds=C.worlds.filter((w,i)=>p.progress[(i+1)+"-4"]).length;const rank=cleared===20?"Champion":cleared>=16?"Elite":cleared>=12?"All-Star":cleared>=8?"Veteran":cleared>=4?"Prospect":"Rookie";const next=C.stages.find(l=>!p.progress[l.id]);return {cleared,stars,worlds,rank,next};}
+ function career(p){const cleared=Object.keys(p.progress).length,stars=Object.values(p.progress).reduce((n,l)=>n+l.stars,0),worlds=C.worlds.filter((w,i)=>p.progress[(i+1)+"-4"]).length;const rank=cleared===20?"Champion":cleared>=16?"Elite":cleared>=12?"All-Star":cleared>=8?"Veteran":cleared>=4?"Prospect":"Rookie";const next=C.stages.find(l=>!p.progress[l.id]);const robotCleared=Object.keys(p.games.robot).length,robotStars=Object.values(p.games.robot).reduce((n,l)=>n+l.stars,0);return {cleared,stars,worlds,rank,next,robotCleared,robotStars,totalCleared:cleared+robotCleared,totalStars:stars+robotStars};}
  function earned(p){return items.filter(i=>unlocked(p,i));}
- function accept(p,level,r){const out=sanitize(p),before=new Set(earned(out).map(i=>i.id));if(level)out.progress=C.clear(out.progress,level,r);if(r.n>0){out.flags.combo=out.flags.combo||r.best>=5;out.flags.comeback=out.flags.comeback||r.comebacks>=1;out.flags.master=out.flags.master||Object.values(out.progress).filter(v=>v.stars===3).length>=5;}return {player:out,newItems:earned(out).filter(i=>!before.has(i.id))};}
+ function acceptGame(p,game,level,r){const out=sanitize(p),before=new Set(earned(out).map(i=>i.id));if(!["crate","robot"].includes(game))return {player:out,newItems:[]};if(level&&game==="crate"){out.progress=C.clear(out.progress,level,r);out.games.crate=out.progress;}if(level&&game==="robot")out.games.robot=GameCatalog.clear(out.games.robot,level,r);if(r.n>0){out.flags.combo=out.flags.combo||r.best>=5;out.flags.comeback=out.flags.comeback||r.comebacks>=1;out.flags.master=out.flags.master||Object.values(out.progress).filter(v=>v.stars===3).length>=5;}return {player:out,newItems:earned(out).filter(i=>!before.has(i.id))};}
+ function accept(p,level,r){return acceptGame(p,"crate",level,r);}
  function equip(p,id){const out=sanitize(p),item=items.find(i=>i.id===id);if(item&&unlocked(out,item))out.gear[item.slot]=id;return out;}
- return {slots,items,skins,defaultGear,sanitize,load,earned,unlocked,accept,equip,career};
+ return {slots,items,skins,defaultGear,sanitize,load,earned,unlocked,accept,acceptGame,equip,career};
 })(Campaign);

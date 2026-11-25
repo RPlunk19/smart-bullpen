@@ -1,0 +1,1 @@
+"use strict";(()=>{try{const p=PlayerStore.active(PlayerStore.read().roster);if(!p)return;document.getElementById("prepPlayerName").textContent=p.name+" • #"+p.number;Avatar.draw(p,document.getElementById("prepAvatar"));document.getElementById("prepPlayer").hidden=false;}catch{}})();
