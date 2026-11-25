@@ -15,13 +15,25 @@ export function garmentGeometry(geo,d,kind){
  let ease=kind==='jersey'?.009+.009*Math.sin(Math.PI*smooth(.53,.85,y)): .006+.007*Math.sin(Math.PI*smooth(.11,.51,y));
  const folds=(Math.sin(y*105+Math.abs(x)*22)+.35*Math.sin(y*183+z*45))*.0018;
  if(sleeve){x+=norm?norm.getX(i)*.008:0;z+=(norm?norm.getZ(i):Math.sign(z))*.012;y+=(norm?norm.getY(i):0)*.008;}
- else {x+=dx/r*(ease+folds);z+=dz/r*(ease+folds);if(kind==='jersey'&&Math.abs(x)<.12&&y>.58&&y<.81){const zref=Math.sign(dz)*(.077+.012*smooth(.6,.75,y))+cz;z=Math.sign(dz)>0?Math.max(z,zref):Math.min(z,zref);}}
+ else if(kind==='jersey'){
+ // Preserve the original curved ribcage, waist and back. Never flatten to a fixed Z plane.
+ // Small positive ease follows the native normals, with more room at chest and less at waist.
+ const chest=smooth(.61,.77,y),waist=1-smooth(.55,.64,y);
+ const clearance=.0045+.0038*chest-.0012*waist;
+ const drape=.0008*Math.sin(y*98+Math.abs(x)*19)*Math.sin(Math.PI*smooth(.53,.84,y));
+ let nx=norm?norm.getX(i):dx/r,nz=norm?norm.getZ(i):dz/r;
+ // Reject inward radial components and use a smooth radial fallback around the torso.
+ const radial=Math.hypot(x,z-cz)||1,rx=x/radial,rz=(z-cz)/radial;
+ if(nx*rx+nz*rz<.18){nx=rx;nz=rz;}
+ const length=Math.hypot(nx,nz)||1;
+ x+=nx/length*(clearance+drape);z+=nz/length*(clearance+drape);
+ }else{x+=dx/r*(ease+folds);z+=dz/r*(ease+folds);}
  out.setXYZ(i,x*d.h,y*d.h+d.bottom,z*d.h);
  }
  out.needsUpdate=true;g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();return {geometry:g,triangles:faces.length/3,used:used.size};
 }
 export function createUniform(body,d,uniforms,shaderHook){
- const pieces={};for(const kind of ['jersey','pants']){const {geometry,triangles,used}=garmentGeometry(body.geometry,d,kind);const mat=new T.MeshStandardMaterial({color:kind==='jersey'?'#461d7c':'#e3e6ed',roughness:.96,metalness:0,side:T.DoubleSide});mat.onBeforeCompile=shaderHook;mat.customProgramCacheKey=()=> 'sb-garment-0201-'+kind;const mesh=new T.SkinnedMesh(geometry,mat);mesh.name='SB fitted '+kind;mesh.bindMode=body.bindMode;mesh.bind(body.skeleton,body.bindMatrix);mesh.position.copy(body.position);mesh.quaternion.copy(body.quaternion);mesh.scale.copy(body.scale);mesh.frustumCulled=false;mesh.castShadow=true;mesh.receiveShadow=true;body.parent.add(mesh);pieces[kind]={mesh,mat,triangles,used};}
+ const pieces={};for(const kind of ['jersey','pants']){const {geometry,triangles,used}=garmentGeometry(body.geometry,d,kind);const mat=new T.MeshStandardMaterial({color:kind==='jersey'?'#461d7c':'#e3e6ed',roughness:.96,metalness:0,side:T.DoubleSide});mat.onBeforeCompile=shaderHook;mat.customProgramCacheKey=()=> 'sb-garment-0202-'+kind;const mesh=new T.SkinnedMesh(geometry,mat);mesh.name='SB fitted '+kind;mesh.bindMode=body.bindMode;mesh.bind(body.skeleton,body.bindMatrix);mesh.position.copy(body.position);mesh.quaternion.copy(body.quaternion);mesh.scale.copy(body.scale);mesh.frustumCulled=false;mesh.castShadow=true;mesh.receiveShadow=true;body.parent.add(mesh);pieces[kind]={mesh,mat,triangles,used};}
  return {pieces,repaint(jersey,pants){pieces.jersey.mat.color.copy(jersey);pieces.pants.mat.color.copy(pants);}};
 }
 function mesh(g,geo,mat,x,y,z){return part(g,geo,mat,x,y,z);}
@@ -39,23 +51,49 @@ export function buildCleat(g,b,color){
  for(let i=0;i<5;i++){const z=back+len*(.33+i*.075),y=top-.006-i*.006;tube(g,lace,[[cx-hw*.54,y-.006,z],[cx,y+.004,z+.004],[cx+hw*.54,y-.006,z]],.0025);}
  for(const s of [-1,1]){tube(g,accent,[[cx+s*hw*.87,base+.026,back+len*.17],[cx+s*hw*.94,base+.031,back+len*.45],[cx+s*hw*.92,base+.022,back+len*.72]],.003);for(const z of [.17,.48,.77])mesh(g,new T.CylinderGeometry(.008,.005,.010,7),sole,cx+s*hw*.55,base-.011,back+len*z);}
 }
-export function buildGlove(g,{left,sign,h,color}){
- const leather=material(color,0,.63),inside=material('#503323',0,.92),lace=material('#d4ba89',0,.82),edge=material('#39291f',0,.78);
- // In the bind pose, X runs from wrist toward fingers; cup opens toward +Z.
- const origin=[left.x+sign*h*.051,left.y,left.z],u=h*.066,v=h*.057,depth=h*.026;
- const point=(a,b,c)=>[origin[0]+sign*a*u,origin[1]+b*v,origin[2]+c*depth];
- const perimeter=[[-1,-.38],[-.75,-.78],[-.30,-1.03],[.10,-.96],[.48,-1.05],[.85,-.83],[1.05,-.42],[1.04,.02],[.98,.45],[.70,.78],[.32,.95],[.08,.71],[-.16,.40],[-.46,.80],[-.77,.65],[-.95,.20]];
- const rings=[0,.34,.67,1],n=perimeter.length,verts=[],indices=[];for(const r of rings)for(const [a,b] of perimeter){verts.push(...point(a*r,b*r,-.64+1.36*r*r));}
- for(let j=0;j<rings.length-1;j++)for(let i=0;i<n;i++){const a=j*n+i,b=j*n+(i+1)%n,c=(j+1)*n+i,d=(j+1)*n+(i+1)%n;indices.push(a,c,b,b,c,d);}
- const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));geo.setIndex(indices);geo.computeVertexNormals();const cupMat=inside.clone();cupMat.side=T.DoubleSide;mesh(g,geo,cupMat,0,0,0);
- const back=geo.clone(),bp=back.attributes.position;for(let i=0;i<bp.count;i++)bp.setZ(i,bp.getZ(i)-.009);back.computeVertexNormals();const backMat=leather.clone();backMat.side=T.DoubleSide;mesh(g,back,backMat,0,0,0);
- const rim=perimeter.map(([a,b])=>point(a,b,.76));rim.push(rim[0]);tube(g,leather,rim,.007);tube(g,edge,rim.map(p=>[p[0],p[1],p[2]-.006]),.0035);
- // Four finger channels and thumb contour. Webbing bridges the thumb/index notch.
- for(const q of [-.65,-.25,.16,.55])tube(g,leather,[point(-.45,q*.28,-.22),point(.28,q*.62,-.18),point(.91,q,.58)],.008);
- for(const q of [-.65,-.25,.16,.55])tube(g,lace,[point(.52,q*.66,.20),point(.72,q*.84,.39),point(.91,q,.60)],.0018);
- tube(g,leather,[point(-.72,.60,.56),point(-.44,.81,.76),point(-.12,.37,.50)],.010);
- for(let i=0;i<4;i++){const t=i/3;tube(g,leather,[point(-.40+t*.42,.53,.58),point(-.23+t*.39,.79,.73)],.0055);}
- for(let i=0;i<3;i++)tube(g,lace,[point(-.42+i*.10,.53+i*.055,.72),point(.01+i*.10,.63+i*.045,.77)],.002);
- for(let i=0;i<perimeter.length;i++){const [a,b]=perimeter[i],[c,d]=perimeter[(i+1)%n];tube(g,lace,[point(a*.94,b*.94,.81),point((a+c)*.49,(b+d)*.49,.83),point(c*.94,d*.94,.81)],.0022);}
- oval(g,leather,left.x,left.y,left.z-.008,h*.020,h*.029,h*.027);
+// Bounds of the covered hand in the original T-pose; wrist coordinate is supplied by the rig.
+export function handBounds(pos,left,sign){
+ const q=[];for(let i=0;i<pos.count;i++){const x=pos.getX(i);if(sign*(x-left.x)>=-.009)q.push([x,pos.getY(i),pos.getZ(i)]);}
+ if(q.length<20)throw Error('Hand geometry unavailable');
+ return {min:[0,1,2].map(i=>Math.min(...q.map(p=>p[i]))),max:[0,1,2].map(i=>Math.max(...q.map(p=>p[i]))),count:q.length};
+}
+export function coveredHandIndices(index,pos,left,sign){
+ const out=[];for(let i=0;i<index.count;i+=3){const ids=[index.getX(i),index.getX(i+1),index.getX(i+2)];
+ // Keep wrist and forearm intact; remove only fully covered distal triangles.
+ if(ids.every(v=>sign*(pos.getX(v)-left.x)>.006))continue;out.push(...ids);}
+ return out;
+}
+export function buildGlove(g,{left,sign,h,color,bounds}){
+ const leather=material(color,0,.67),inside=material('#503323',0,.92),lace=material('#d4ba89',0,.82),edge=material('#39291f',0,.78);
+ const distal=sign>0?bounds.max[0]:-bounds.min[0],prox=sign*left.x-.022;
+ const center=(prox+distal+.035)/2,u=(distal+.035-prox)/2;
+ const cy=(bounds.min[1]+bounds.max[1])/2,v=Math.max((bounds.max[1]-bounds.min[1])*.66+.014,h*.043);
+ const backZ=bounds.min[2]-.014,frontZ=bounds.max[2]+.011,depth=Math.max(.029,h*.023);
+ const point=(a,b,z)=>[sign*(center+a*u),cy+b*v,z];
+ // Finger side is distal (+a); scalloped thumb and web are on the opposite upper side.
+ const outline=[[-1,-.36],[-.82,-.72],[-.42,-.96],[.02,-1.03],[.45,-1.02],[.80,-.79],[1,-.43],[1.02,-.07],[.99,.30],[.86,.65],[.56,.89],[.18,1.02],[-.12,.82],[-.32,.61],[-.57,.96],[-.86,.78],[-1.02,.35]];
+ const n=outline.length,verts=[],idx=[],rings=[0,.34,.68,1];
+ // Continuous padded enclosure: concave front, convex leather back, joined perimeter wall.
+ // The catching pocket is outside the hand, rather than a hole exposing the fingers.
+ for(const r of rings)for(const [a,b] of outline)verts.push(...point(a*r,b*r,frontZ+depth*r*r));
+ for(const r of rings)for(const [a,b] of outline)verts.push(...point(a*r,b*r,backZ+.009*r*r));
+ function band(offset,reverse){for(let j=0;j<rings.length-1;j++)for(let i=0;i<n;i++){const a=offset+j*n+i,b=offset+j*n+(i+1)%n,c=offset+(j+1)*n+i,d=offset+(j+1)*n+(i+1)%n;idx.push(...(reverse?[a,b,c,b,d,c]:[a,c,b,b,c,d]));}}
+ band(0,sign<0);const frontCount=idx.length;band(n*rings.length,sign>=0);
+ for(let i=0;i<n;i++){const a=(rings.length-1)*n+i,b=(rings.length-1)*n+(i+1)%n,c=(2*rings.length-1)*n+i,d=(2*rings.length-1)*n+(i+1)%n;idx.push(...(sign<0?[a,c,b,b,c,d]:[a,b,c,b,d,c]));}
+ const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(verts,3));geo.setIndex(idx);geo.computeVertexNormals();geo.addGroup(0,frontCount,0);geo.addGroup(frontCount,idx.length-frontCount,1);
+ inside.side=T.DoubleSide;leather.side=T.DoubleSide;const cup=mesh(g,geo,[inside,leather],0,0,0);cup.name='Enclosed leather glove';
+ const rim=outline.map(([a,b])=>point(a,b,frontZ+depth));rim.push(rim[0]);tube(g,leather,rim,.006);tube(g,edge,rim.map(p=>[p[0],p[1],p[2]-.008]),.003);
+ // Raised finger stalls on the back and distinct stitched seams on the catching face.
+ for(const q of [-.67,-.26,.15,.53]){
+ tube(g,leather,[point(-.44,q*.32,backZ-.001),point(.23,q*.65,backZ-.004),point(.91,q,backZ+.006)],.008);
+ tube(g,lace,[point(.52,q*.68,frontZ+depth*.48),point(.73,q*.84,frontZ+depth*.74),point(.91,q,frontZ+depth)],.0018);
+ }
+ tube(g,leather,[point(-.75,.62,frontZ+depth*.78),point(-.56,.95,frontZ+depth),point(-.28,.60,frontZ+depth*.58)],.010);
+ for(let i=0;i<4;i++){const t=i/3;tube(g,leather,[point(-.38+t*.42,.56,frontZ+depth*.76),point(-.20+t*.40,.83,frontZ+depth)],.0055);}
+ for(let i=0;i<3;i++)tube(g,lace,[point(-.39+i*.10,.56+i*.055,frontZ+depth),point(.03+i*.10,.66+i*.045,frontZ+depth)],.002);
+ for(let i=0;i<n;i++){const [a,b]=outline[i],[c,d]=outline[(i+1)%n];tube(g,lace,[point(a*.96,b*.96,frontZ+depth+.004),point((a+c)*.49,(b+d)*.49,frontZ+depth+.007),point(c*.96,d*.96,frontZ+depth+.004)],.0022);}
+ // Wrist entry/cuff: a short fitted leather band with a dark opening around the wrist.
+ const wristY=left.y,wristZ=left.z,wr=Math.max(.024,Math.min(.042,(bounds.max[1]-bounds.min[1])*.33));
+ const cuff=mesh(g,new T.CylinderGeometry(wr*1.11,wr,.045,24,1,true),leather,left.x,wristY,wristZ);cuff.rotation.z=-sign*Math.PI/2;
+ const lip=mesh(g,new T.TorusGeometry(wr,.004,8,24),edge,left.x-sign*.022,wristY,wristZ);lip.rotation.y=Math.PI/2;
 }
