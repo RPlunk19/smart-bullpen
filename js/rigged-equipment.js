@@ -1,6 +1,6 @@
 /* Original Smart Bullpen fittings. Body paint follows the original skinned mesh. */
 import {T,material,part} from './graphics-platform.js';
-import {createUniform,footBounds,buildCleat,buildGlove,garmentRegion,handBounds,coveredHandIndices} from './baseball-gear.js';
+import {createUniform,footBounds,buildCleat,garmentRegion} from './baseball-gear.js';
 export const hairStyles=['short-hair','curls-hair','long-hair','blond-hair','ponytail','bun'];
 export const hairColors=[['Black','#252128'],['Dark brown','#382a28'],['Brown','#754b32'],['Light brown','#a47a4d'],['Blond','#d7b16a'],['Red','#a54b30'],['Gray','#a9a9b1'],['White','#e8e2d8']];
 export function safeColor(value,fallback='#382a28'){return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)?value:fallback;}
@@ -52,9 +52,10 @@ export function createFittings({root,model,bones,body,meshes,restore}){
  if(has('glasses')){const lens=material(color('glasses','#79dcf6'),.48,.19),frame=material('#192637',.16,.43),x=(eyeBox.max.x-eyeBox.min.x)*.25;for(const s of [-1,1]){const z=front(s*x,eyeY,eyeBox.max.z)+.008;sphere(g,frame,s*x,eyeY,z,rx*.43,rx*.24,.012);sphere(g,lens,s*x,eyeY,z+.008,rx*.38,rx*.19,.006);const arm=new T.CatmullRomCurve3([new T.Vector3(s*rx*.82,eyeY,z),new T.Vector3(s*rx*1.02,eyeY,zc),new T.Vector3(s*rx*.92,eyeY-.013,zc-rz*.55)]);part(g,new T.TubeGeometry(arm,8,.0035,6,false),frame);}sphere(g,frame,0,eyeY+.005,front(0,eyeY,eyeBox.max.z)+.012,rx*.16,.005,.006);}
  });
  if(has('necklace'))anchor('spine_03',g=>{const metal=material(color('necklace','#f4bf4a'),.73,.26),points=[];for(let j=0;j<=24;j++){const t=Math.PI*j/24,x=d.h*.041*Math.cos(t),y=d.ys(.852-.075*Math.sin(t)),z=front(x,y,.075)+.015;points.push(new T.Vector3(x,y,z));}const curve=new T.CatmullRomCurve3(points);part(g,new T.TubeGeometry(curve,32,.0032,6,false),metal);for(let j=1;j<24;j+=2){const v=points[j],o=part(g,new T.TorusGeometry(.006,.0017,6,12),metal,v.x,v.y,v.z+.002);o.rotation.z=j*.35;o.rotation.y=j%4===1?.5:-.5;}if(!['silver-chain','gold-chain','robot-chain'].includes(id('necklace'))){const v=points[12];part(g,new T.OctahedronGeometry(.013),metal,v.x,v.y-.014,v.z+.005);}});
- // Fitted footwear and cup-shaped fielding glove use the measured rest geometry.
+ // Fitted footwear uses the measured rest geometry.
  for(const side of ['l','r']){const foot=localPos(bones.get('foot_'+side)),b=footBounds(p,d,Math.sign(foot.x)||1);anchor('foot_'+side,g=>buildCleat(g,b,color('cleats','#263041')));}
- if(has('glove')){const bounds=handBounds(p,left,sign);body.geometry.setIndex(coveredHandIndices(originalIndex,p,left,sign));anchor('hand_l',g=>buildGlove(g,{left,sign,h:d.h,color:color('glove','#ad723e'),bounds}));}else body.geometry.setIndex(originalIndex);
+ // Glove art is deferred; retain full hands and keep inventory/reward IDs untouched.
+ body.geometry.setIndex(originalIndex);
  root.scale.copy(lastScale);root.updateMatrixWorld(true);}
  return {repaint,dimensions:d};
 }
