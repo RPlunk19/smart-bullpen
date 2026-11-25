@@ -17,11 +17,11 @@ function current(s){return s.frames[s.turn];}
 function hitter(s){return hitters[current(s).batter%hitters.length];}
 function call(s,pitch,target){if(s.result||s.call||!s.arsenals[s.turn].includes(pitch)||!Number.isInteger(target)||target<0||target>=zones.length)return false;s.call={pitch,target};return true;}
 function quality(s,actual){const q=current(s),h=hitter(s),c=s.call,inZone=actual<9,repeat=q.pa.slice(-2).filter(x=>x.pitch===c.pitch).length,hot=h.hot.includes(actual),fav=h.fav.includes(c.pitch),weak=h.weak.includes(c.pitch),center=actual===4,exact=actual===c.target;
-const predictable=repeat*.10,selection=(fav?.13:0)-(weak?.10:0)+predictable+(q.balls===3&&c.target>=9?.10:0),execution=(center?.18:0)+(hot?.13:0)+(exact?-.05:.07);
+const predictable=repeat*.10,calledHot=h.hot.includes(c.target),calledCenter=c.target===4,selection=(fav?.13:0)-(weak?.10:0)+predictable+(calledHot?.09:0)+(calledCenter?.08:0)+(q.balls===3&&c.target>=9?.10:0)+(q.strikes===0&&h.style==="Aggressive leadoff"&&fav?.06:0),execution=(center?.18:0)+(hot?.13:0)+(exact?-.05:.07);
 const danger=clamp(.22+selection+execution+(h.power||0)+(s.level==="All-Star"?.10:s.level==="Rookie"?-.10:0),.03,.85);
 const swing=inZone?clamp(.62+(q.strikes===2?.17:0)+(q.balls===3?-.14:0)+(fav?.07:0),.35,.95):clamp(.19+h.chase+(q.strikes===2?.16:0)-(q.balls===3?.16:0)+(weak?.05:0),.02,.68);
 const miss=clamp(.38-danger*.35+(weak?.08:0)+(inZone?0:.18)-(h.contact||0)-(q.strikes===2?.04:0),.07,.70);
-return {danger,swing,miss,exact,hot,fav,weak,repeat,inZone};}
+return {danger,swing,miss,exact,hot,fav,weak,repeat,inZone,calledHot,calledCenter};}
 function walk(q){let carry=true;for(let i=0;i<3&&carry;i++){const occupied=q.bases[i];q.bases[i]=true;carry=occupied;}if(carry)q.runs++;q.walks++;}
 function hit(q,n){const old=q.bases.slice();q.bases=[false,false,false];for(let i=2;i>=0;i--)if(old[i]){if(i+n>=3)q.runs++;else q.bases[i+n]=true;}if(n===4)q.runs++;else q.bases[n-1]=true;q.hits++;}
 function nextPA(q){q.balls=0;q.strikes=0;q.batter=(q.batter+1)%hitters.length;q.pa=[];}
@@ -30,15 +30,15 @@ function record(s,actual,rng=Math.random){if(!s.call||s.result||!Number.isIntege
 if(rolls[0]>=k.swing){outcome=k.inZone?"Called strike":"Ball";}
 else if(rolls[1]<k.miss)outcome="Swinging strike";
 else if(rolls[2]<.23)outcome="Foul";
-else if(rolls[3]<k.danger){const u=rolls[2];const bases=u>.91&&k.danger>.38?4:u>.78?2:u>.72&&k.danger>.5?3:1;hit(q,bases);outcome=["","Single","Double","Triple","Home run"][bases];paEnd=true;}
+else if(rolls[3]<k.danger){const u=rolls[2];const bases=u>.91&&k.danger>.38?4:u>.87&&k.danger>.5?3:u>.78?2:1;hit(q,bases);outcome=["","Single","Double","Triple","Home run"][bases];paEnd=true;}
 else{q.outs++;q.outsMade++;outcome="Ball in play • out";paEnd=true;}
 if(outcome==="Ball"){q.balls++;if(q.balls===4){walk(q);outcome="Walk";paEnd=true;}}
 if(outcome==="Called strike"||outcome==="Swinging strike"){q.strikes++;if(q.strikes===3){q.outs++;q.outsMade++;q.ks++;outcome="Strikeout";paEnd=true;}}
 if(outcome==="Foul"&&q.strikes<2)q.strikes++;
-q.n++;const e={player:s.turn,inning:q.inning,batter:h.name,pitch:c.pitch,target:c.target,actual,outcome,runs:q.runs-oldRuns,outs:q.outs-oldOuts,exact:k.exact,selection:k.fav||k.repeat>=2?"Risky matchup / repeated look":k.weak?"Disrupted hitter preference":"Neutral matchup",execution:k.exact?"Hit called spot":actual===4?"Missed over heart":actual>=9?"Missed outside zone":"Missed called spot",before,rolls};
+q.n++;const e={player:s.turn,inning:q.inning,batter:h.name,pitch:c.pitch,target:c.target,actual,outcome,runs:q.runs-oldRuns,outs:q.outs-oldOuts,exact:k.exact,selection:k.repeat>=2?"Repeated look — hitter adjusting":k.fav||k.calledHot||k.calledCenter?"Risky pitch selection / intended spot":k.weak?"Disrupted hitter preference":"Neutral matchup",execution:k.exact?"Hit called spot":actual===4?"Missed over heart":actual>=9?"Missed outside zone":"Missed called spot",before,rolls};
 q.pa.push({pitch:c.pitch,target:c.target,actual});if(paEnd)nextPA(q);s.call=null;s.log.push(e);finishFrame(s,q);return e;}
 function undo(s){if(!s.log.length||s.replay)return false;const e=s.log.pop();s.frames=copy(e.before.frames);s.turn=e.before.turn;s.call=copy(e.before.call);s.result=e.before.result;s.replay=e.rolls.slice();return true;}
 function stop(s){if(s.replay)return false;s.stopped=true;s.result="stopped";s.call=null;return true;}
-function report(s){const rows=s.frames.map((q,i)=>{const log=s.log.filter(e=>e.player===i);return {name:s.names[i],n:q.n,runs:q.runs,hits:q.hits,walks:q.walks,ks:q.ks,outs:q.outsMade,completed:q.completed,exact:log.filter(e=>e.exact).length,strikes:log.filter(e=>e.actual<9).length,complete:q.completed===s.innings};});let winner=null;if(s.names.length===2&&s.result==="complete"&&rows.every(r=>r.complete)){if(rows[0].runs!==rows[1].runs)winner=rows[0].runs<rows[1].runs?0:1;}return {rows,winner,draw:s.names.length===2&&rows.every(r=>r.complete)&&rows[0].runs===rows[1].runs};}
+function report(s){const rows=s.frames.map((q,i)=>{const log=s.log.filter(e=>e.player===i);return {name:s.names[i],n:q.n,runs:q.runs,hits:q.hits,walks:q.walks,ks:q.ks,outs:q.outsMade,completed:q.completed,exact:log.filter(e=>e.exact).length,strikes:log.filter(e=>e.actual<9).length,complete:q.completed===s.innings};});let winner=null;if(s.names.length===2&&s.result==="complete"&&rows.every(r=>r.complete)){if(rows[0].runs!==rows[1].runs)winner=rows[0].runs<rows[1].runs?0:1;}return {rows,winner,draw:!s.stopped&&s.names.length===2&&rows.every(r=>r.complete)&&rows[0].runs===rows[1].runs};}
 return {pitches,caps,zones,levels,hitters,presets,start,current,hitter,call,quality,record,undo,stop,report};
 })();
