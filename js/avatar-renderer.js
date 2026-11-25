@@ -12,15 +12,16 @@ export function createAvatarRenderer(canvas,container,{onFailure}={}){
  function angle(a){angleValue=a;if(stage){stage.setAngle(a);render();}}
  function lost(e){e.preventDefault();fail();}
  function visibility(){if(document.hidden)stop();else resize();}
- function dispose(){if(closed)return;closed=true;serial++;stop();window.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);if(stage){if(rig)disposeRoot(rig.root);stage.dispose();stage.renderer.forceContextLoss?.();stage=null;}rig=null;}
+ function dispose(){if(closed)return;closed=true;serial++;stop();window.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);if(stage){if(rig){const seen=new Set();rig.root.traverse(o=>{if(o.skeleton&&!seen.has(o.skeleton)){seen.add(o.skeleton);o.skeleton.dispose();}});}stage.dispose();stage.renderer.forceContextLoss?.();stage=null;}pending=null;rig=null;}
  async function show(config,{motion='idle',angle:nextAngle=25,result=false}={}){
   if(closed)return false;const ticket=++serial;stop();angleValue=nextAngle;const key=config.avatarStyle==='female'?'female':'male';
   try{
-   if(!stage){canvas.hidden=false;stage=createStage(canvas,container);stage.setQuality('low');stage.setLight('studio');canvas.addEventListener('webglcontextlost',lost);window.addEventListener('resize',resize);document.addEventListener('visibilitychange',visibility);}
+   if(!stage){stage=createStage(canvas,container);stage.setQuality('low');stage.setLight('studio');canvas.addEventListener('webglcontextlost',lost);window.addEventListener('resize',resize);document.addEventListener('visibilitychange',visibility);}
+   if(base===key&&rig&&pending&&pending.key!==key)pending=null;
    if(base!==key||!rig){
     if(!pending||pending.key!==key){const entry={key,promise:loadCandidate(key)};pending=entry;}
     const entry=pending,next=await entry.promise;
-    if(closed||ticket!==serial){if(closed||pending!==entry)disposeRoot(next.root);return false;}
+    if(closed||ticket!==serial){if((closed||pending!==entry)&&!entry.disposed){entry.disposed=true;disposeRoot(next.root);}return false;}
     pending=null;if(rig&&rig!==next){rig.root.traverse(o=>{if(o.isSkinnedMesh)o.skeleton?.dispose();});}rig=next;base=key;signature='';stage.setModel(rig.root);
    }
    if(ticket!==serial||closed)return false;

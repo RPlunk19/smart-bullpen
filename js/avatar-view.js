@@ -2,13 +2,14 @@
 /* Classic UI bridge. Load the local renderer only when a visible character is requested. */
 const AvatarView=(()=>{
  let view=null,host=null,fallback=null,canvas=null,serial=0,loading=null,desiredAngle=25,disabled=false;
+ function newCanvas(){const c=document.createElement("canvas");c.className="avatarCanvas";c.hidden=true;c.setAttribute("aria-label","Customizable 3D baseball player");return c;}
  function hide(){serial++;if(view){view.dispose();view=null;}if(canvas)canvas.remove();if(fallback)fallback.hidden=false;host=null;fallback=null;canvas=null;disabled=false;}
  function show(target,p,previewId=null,options={}){
-  if(host!==target){hide();host=target;fallback=document.createElement("div");fallback.className="avatarFallback";canvas=document.createElement("canvas");canvas.className="avatarCanvas";canvas.hidden=true;canvas.setAttribute("aria-label","Customizable 3D baseball player");target.replaceChildren(fallback,canvas);}
+  if(host!==target){hide();host=target;fallback=document.createElement("div");fallback.className="avatarFallback";canvas=newCanvas();target.replaceChildren(fallback,canvas);}
   const token=++serial,status=options.status,config=Clubhouse.preview(p,previewId);desiredAngle=Number.isFinite(options.angle)?options.angle:25;Avatar.draw(p,fallback,previewId,true);
   const report=t=>{if(status)status.textContent=t;};
-  const classic=()=>{if(view){view.dispose();view=null;}canvas.hidden=true;fallback.hidden=false;report("Classic illustrated avatar • 3D unavailable or off");};
-  if(options.enabled===false){classic();return;}if(disabled){classic();return;}
+  const classic=()=>{if(view){view.dispose();view=null;const old=canvas;canvas=newCanvas();old.replaceWith(canvas);}canvas.hidden=true;fallback.hidden=false;report("Classic illustrated avatar • 3D unavailable or off");};
+  if(options.enabled===false){disabled=false;classic();return;}if(disabled){classic();return;}
   report(previewId?"Updating gear preview…":"Loading 3D player…");
   const targetCanvas=canvas;
   loading=loading||import("./avatar-renderer.js").catch(e=>{loading=null;throw e;});
