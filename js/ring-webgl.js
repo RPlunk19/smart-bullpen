@@ -18,7 +18,7 @@ export function createRingScene(canvas,{onFailure}={}){
  function stopFrame(){if(frame)cancelAnimationFrame(frame);frame=0;}
  function destroy(){if(closed)return;closed=true;serial++;stopFrame();window.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibility);canvas.removeEventListener('webglcontextlost',lost);disposeObject(scene);renderer.dispose();renderer.forceContextLoss?.();}
  function lost(e){e.preventDefault();if(!closed)onFailure?.();}
- function visibility(){if(document.hidden)stopFrame();else if(ready){resize();wake();}}
+ function visibility(){if(document.hidden)stopFrame();else if(ready){resize();if(entry&&performance.now()-born<duration)wake();}}
  window.addEventListener('resize',resize);document.addEventListener('visibilitychange',visibility);canvas.addEventListener('webglcontextlost',lost);
  function clear(){for(const a of actors){scene.remove(a.holder);disposeObject(a.holder);}actors=[];if(arena){scene.remove(arena);disposeObject(arena);arena=null;}ready=false;}
  async function prepare(data,profiles){
@@ -26,7 +26,7 @@ export function createRingScene(canvas,{onFailure}={}){
   try{arena=buildArena(data.solo?data.bossIndex:4);scene.add(arena);rim.color.set(data.accent);
    for(let i=0;i<2;i++){const robot=data.solo&&i===1,rig=robot?buildBoss(data.bossIndex):await loadCandidate(profiles[i].avatarStyle==='female'?'female':'male');
     if(closed||ticket!==serial){disposeObject(rig.root);return false;}
-    if(!robot){rig.repaint(profiles[i]);rig.scale(profiles[i].avatarHeight,profiles[i].avatarBuild);}
+    if(!robot){try{rig.repaint(profiles[i]);rig.scale(profiles[i].avatarHeight,profiles[i].avatarBuild);}catch(e){disposeObject(rig.root);throw e;}}
     const holder=new T.Group();holder.add(rig.root);
     const shield=part(holder,new T.SphereGeometry(1,16,12),new T.MeshBasicMaterial({color:'#83e7ff',transparent:true,opacity:.23,wireframe:true,depthWrite:false}),0,1.35,0);shield.scale.set(.99,1.44,.82);shield.visible=false;
     const shadow=part(holder,new T.CircleGeometry(.67,28),new T.MeshBasicMaterial({color:'#111d2b',transparent:true,opacity:.28,depthWrite:false}),0,.012,0);shadow.rotation.x=-Math.PI/2;

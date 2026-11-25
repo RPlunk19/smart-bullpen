@@ -1,5 +1,5 @@
 import {createStage} from './graphics-platform.js';
-import {scout,pose} from './lab-models.js';
+import {pose} from './lab-models.js';
 import {buildBoss,bossNames} from './ring-boss-models.js';
 import {appearance,buildPlayer,playerPose} from './player-model.js';
 import {buildPlayer as previousPlayer} from './player-model-017.js';
