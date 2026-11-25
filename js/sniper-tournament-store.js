@@ -7,7 +7,7 @@ const TournamentStore=(()=>{
  function players(t,index,names={}){const m=t.matches[index];if(!m)throw Error("Invalid match");return [...t.entries[m.a],...t.entries[m.b]].map(id=>({id,name:names[id]||id,balls:[{...ball}],pitches:["Fastball"]}));}
  function newMatch(t,index,names){return Sniper.start({mode:t.teamSize===1?"versus":"team",cap:t.cap,format:"mirror",schedule:t.schedule,players:players(t,index,names)});}
  function eligible(t,index){return !t.archived&&!t.aborted&&t.champions===null&&!!t.matches[index]&&!t.matches[index].result;}
- function total(t,id,date=null){let n=0;for(const h of t.history)for(const e of h.rows)if(e.id===id&&(!date||e.date===date))n++;for(const d of Object.values(t.drafts))for(const e of d.rows)if(e.id===id&&(!date||e.date===date))n++;return n;}
+ function total(t,id,date=null){let n=0;for(const h of t.history)for(const e of h.rows)if(e.id===id&&(!date||e.date===date))n++;for(const d of Object.values(t.drafts)){for(const e of d.rows)if(e.id===id&&(!date||e.date===date))n++;if(d.correction?.id===id&&(!date||d.correction.date===date))n++;}return n;}
  function dailyTotal(list,id,date=day()){return list.reduce((n,t)=>n+total(t,id,date),0);}
  function allowance(t,id,date=day()){return t.daily[date]?.[id]??null;}
  function approve(t,id,remaining,list,date=day()){if(!t.entries.flat().includes(id)||!validDay(date)||!Number.isInteger(remaining)||remaining<0||remaining>50)throw Error("Enter an approved remaining allowance of 0–50.");t.daily[date]??={};t.daily[date][id]=dailyTotal(list,id,date)+remaining;}
