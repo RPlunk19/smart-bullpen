@@ -29,6 +29,6 @@ const Ring=(function ring(){
  const entry={hit,counter,tape,defender};s.log.push(entry);return entry;}
  function undo(s){const e=s.log.at(-1),old=s.history.pop();if(!e||!old)return false;const history=s.history;Object.assign(s,old,{history,replay:e.tape});return true;}
  function stop(s){if(!s.result)s.result="stopped";}
- function report(s,i=0){const p=s.fighters[i];return {n:p.n,hits:p.hits,best:p.best,comebacks:p.comebacks,command:p.n?p.hits/p.n:0,hp:p.hp,damage:p.dealt,shield:p.shield,recovered:p.recovered,prevented:p.prevented,powerups:p.powerups,emptyMisses:s.log.filter(x=>x.hit.side===i&&x.hit.empty).length,victory:s.mode==="solo"&&s.result==="win",duelWin:s.mode==="duel"&&s.result===(i===0?"p1":"p2")};}
+ function report(s,i=0){const p=s.fighters[i];return {n:p.n,hits:p.hits,best:p.best,comebacks:p.comebacks,strikes:s.log.filter(x=>x.hit.side===i&&x.hit.actual>=0&&x.hit.actual<9).length,command:p.n?p.hits/p.n:0,hp:p.hp,damage:p.dealt,shield:p.shield,recovered:p.recovered,prevented:p.prevented,powerups:p.powerups,emptyMisses:s.log.filter(x=>x.hit.side===i&&x.hit.empty).length,victory:s.mode==="solo"&&s.result==="win",duelWin:s.mode==="duel"&&s.result===(i===0?"p1":"p2")};}
  return {zones,factors,damage,start,record,undo,stop,report,available,abilityStatus,counterStats};
 })();
