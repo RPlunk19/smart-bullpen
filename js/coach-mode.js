@@ -1,0 +1,2 @@
+"use strict";
+(()=>{let allowed=false;try{allowed=sessionStorage.getItem("sb-coach-mode")==="1";}catch{}if(!allowed){location.replace("index.html?player=1");return;}document.body.hidden=false;window.addEventListener("pageshow",()=>{try{if(sessionStorage.getItem("sb-coach-mode")!=="1")location.replace("index.html?player=1");}catch{location.replace("index.html?player=1");}});})();
