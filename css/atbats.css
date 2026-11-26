@@ -2,3 +2,5 @@
 .abBroadcast{border:1px solid #789b83;background:#182f2b;border-radius:12px;overflow:hidden;margin:10px 0}.abBroadcastControls{display:flex;justify-content:space-between;align-items:center;padding:8px;gap:8px}.abBroadcastControls select{min-height:36px;padding:5px;margin-left:5px}.abBroadcast canvas{display:block;width:100%;height:clamp(200px,46vw,380px)}#cinemaStatus{font-size:12px;color:#f5d88e;text-align:center;margin:6px}
 
 .abBroadcastControls{flex-wrap:wrap}.abBroadcastControls label{font-size:12px}#graphicsStatus{font-size:11px;text-align:center;margin:4px}.abBroadcast canvas[hidden]{display:none!important}
+
+.abTeamSetup{border:1px solid #819b75;border-radius:12px;padding:12px;margin:12px 0;background:#263f35}.abTeamSetup label{display:block;margin:8px 0}.abTeamSetup select{width:100%}.abTeamSetup h3{margin-top:0}
