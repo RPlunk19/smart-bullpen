@@ -1,0 +1,46 @@
+/* Original real-time 3D baseball presentation. No scoring or storage. */
+import {T,part,material} from './graphics-platform.js';
+import {loadCandidate} from './rigged-character.js';
+const clamp=x=>Math.max(0,Math.min(1,x)),mix=(a,b,t)=>a+(b-a)*clamp(t);
+function dispose(root){const seen=new Set();root.traverse(o=>{for(const a of [o.geometry,o.skeleton,...(Array.isArray(o.material)?o.material:[o.material])])if(a&&!seen.has(a)){seen.add(a);if(a.isMaterial)for(const v of Object.values(a))if(v?.isTexture&&!seen.has(v)){seen.add(v);v.dispose();}a.dispose?.();}});}
+export function createBaseballScene(canvas,onFailure){
+ const renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'low-power'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.35));renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+ const scene=new T.Scene();scene.background=new T.Color('#83a8bd');scene.fog=new T.Fog('#83a8bd',48,105);const camera=new T.PerspectiveCamera(42,1,.1,130);
+ const hemi=new T.HemisphereLight('#e6f4ff','#5e6555',2.4),sun=new T.DirectionalLight('#fff0d6',2.7);sun.position.set(-15,30,12);scene.add(hemi,sun);
+ const grass=material('#42764b',0,.95),stripe=material('#4c8252',0,.95),dirt=material('#b88c60',0,.95),chalk=material('#f3efdc',0,.8),navy=material('#223a4e'),steel=material('#8698a2'),seat=material('#436278'),red=material('#a94236'),white=material('#f6f4ea');
+ const box=(x,y,z,w,h,d,m)=>part(scene,new T.BoxGeometry(w,h,d),m,x,y,z);
+ box(0,-.14,15,78,.25,83,grass);for(let i=-5;i<=5;i+=2)box(i*6,-.008,17,6,.015,78,stripe);
+ const disk=(x,z,r,m,y=.015)=>part(scene,new T.CylinderGeometry(r,r,.035,48),m,x,y,z);
+ const diamond=box(0,.025,9,15.6,.05,15.6,dirt);diamond.rotation.y=Math.PI/4;const inner=box(0,.06,9,9.8,.04,9.8,grass);inner.rotation.y=Math.PI/4;
+ disk(0,8.5,1.55,dirt,.055);box(0,.105,8.5,.65,.06,.2,chalk);disk(0,0,2.1,dirt,.065);
+ function line(a,b,m=chalk,width=.045){const p=new T.Vector3(...a),q=new T.Vector3(...b),delta=q.clone().sub(p);const o=part(scene,new T.CylinderGeometry(width,width,delta.length(),6),m);o.position.copy(p.add(q).multiplyScalar(.5));o.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());return o;}
+ line([0,.10,0],[33,.10,33]);line([0,.10,0],[-33,.10,33]);for(const [x,z] of [[9,9],[0,18],[-9,9]]){const b=box(x,.13,z,.48,.12,.48,white);b.rotation.y=Math.PI/4;}box(0,.13,0,.48,.08,.48,white);
+ for(const x of [-1.05,1.05]){for(const side of [-1,1])line([x+side*.43,.11,-.75],[x+side*.43,.11,.75],chalk,.026);line([x-.43,.11,-.75],[x+.43,.11,-.75],chalk,.026);line([x-.43,.11,.75],[x+.43,.11,.75],chalk,.026);}
+ for(let i=0;i<15;i++){const a=-1.18+i*2.36/14,x=Math.sin(a)*34,z=Math.cos(a)*34+8;const wall=box(x,1.45,z,5.8,2.9,.5,navy);wall.rotation.y=a;const cap=box(x,2.94,z,5.8,.11,.6,steel);cap.rotation.y=a;for(let k=0;k<3;k++){const tier=box(Math.sin(a)*(36+k*2),3.3+k*.8,Math.cos(a)*(36+k*2)+8,5.8,.65,2.2,seat);tier.rotation.y=a;}}
+ const light=new T.MeshBasicMaterial({color:'#fff5ce'});for(const x of [-24,24]){box(x,7,24,.42,14,.42,steel);box(x,14,24,4,.45,.5,navy);for(let i=0;i<5;i++)box(x-1.5+i*.75,14,23.65,.55,.32,.12,light);}
+ box(0,1,-3.4,11,2,.35,navy);for(let i=-5;i<=5;i++)box(i,3,-3.4,.05,3,.05,steel);
+ const ball=part(scene,new T.SphereGeometry(.105,12,8),white);ball.visible=false;
+ let pitcher=null,batter=null,rigKey='',closed=false,ticket=0,ready=false;
+ function shadow(holder){const m=new T.Mesh(new T.CircleGeometry(.48,24),new T.MeshBasicMaterial({color:'#203727',transparent:true,opacity:.28,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=.011;holder.add(m);}
+ function simple(color=navy){const root=new T.Group(),body=new T.Group();root.add(body);shadow(root);const skin=material('#ba8865');part(body,new T.CapsuleGeometry(.21,.50,4,8),color,0,1.12,0);part(body,new T.SphereGeometry(.18,12,8),skin,0,1.75,0);part(body,new T.SphereGeometry(.19,12,8,0,Math.PI*2,0,Math.PI/2),color,0,1.80,0);const arms=[],legs=[];for(const sign of [-1,1]){const arm=new T.Group();arm.position.set(sign*.28,1.40,0);body.add(arm);part(arm,new T.CapsuleGeometry(.075,.34,3,6),skin,0,-.21,0);arms.push(arm);const leg=new T.Group();leg.position.set(sign*.13,.82,0);body.add(leg);part(leg,new T.CapsuleGeometry(.092,.54,3,6),white,0,-.34,0);part(leg,new T.BoxGeometry(.19,.12,.31),navy,0,-.72,.08);legs.push(leg);}scene.add(root);return {root,body,arms,legs};}
+ const fielders=[[0,8.5],[-5,12],[5,12],[-9,9],[9,9],[-15,24],[0,29],[15,24]].map(([x,z])=>({...simple(),x,z}));
+ const runners=Array.from({length:4},()=>simple(red));const catcher=simple(navy);catcher.root.position.set(0,0,-1.35);catcher.body.scale.y=.75;
+ function setSimple(a,x,z,yaw,run,t){a.root.visible=true;a.root.position.set(x,run?.08*Math.abs(Math.sin(t*17)):0,z);a.root.rotation.y=yaw;a.arms.forEach((v,i)=>v.rotation.x=run?Math.sin(t*17+i*Math.PI)*.8:0);a.legs.forEach((v,i)=>v.rotation.x=run?-Math.sin(t*17+i*Math.PI)*.85:0);a.body.rotation.x=run?.13:0;}
+ function removeRig(a){if(a){scene.remove(a.holder);dispose(a.holder);}}
+ async function prepare(profile){const key=JSON.stringify(profile);if(key===rigKey&&ready)return true;const id=++ticket;ready=false;removeRig(pitcher);removeRig(batter);pitcher=batter=null;const made=[];
+ try{for(let i=0;i<2;i++){const config=i===0?profile:{skin:'#bd8b67',number:24,avatarStyle:'male',avatarHeight:50,avatarBuild:50,hairStyle:'short-hair',hairColor:'#382a28',gear:{jersey:{color:'#ad4336'},pants:{color:'#ece6d8'},hat:{color:'#263b4b'}},showHat:true};const rig=await loadCandidate(config.avatarStyle==='female'?'female':'male');if(closed||id!==ticket){dispose(rig.root);for(const a of made)removeRig(a);return false;}const holder=new T.Group();holder.add(rig.root);holder.scale.setScalar(.70);scene.add(holder);const a={rig,holder};made.push(a);rig.repaint(config);rig.scale(config.avatarHeight??50,config.avatarBuild??50);shadow(holder);if(i===1)a.bat=part(holder,new T.CylinderGeometry(.045,.027,1.1,10),material('#d5a46a'));}
+ if(closed||id!==ticket){made.forEach(removeRig);return false;}[pitcher,batter]=made;rigKey=key;ready=true;return true;}catch(err){made.forEach(removeRig);throw err;}}
+ function draw(entry,ms,profile,hand,bases=[]){if(closed||!ready)return false;const rect=canvas.getBoundingClientRect();if(rect.width<2||rect.height<2)return false;const w=Math.round(rect.width),h=Math.round(rect.height);if(canvas.width!==Math.round(w*renderer.getPixelRatio())||canvas.height!==Math.round(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+ const a=entry?AtBatFilm.sample(entry,ms):null,wide=!!a?.wide,side=hand==='L'?1:-1;
+ if(wide){camera.position.set(21,25,-25);camera.lookAt(0,0,12);}else{camera.position.set(3.8,3.2,13.7);camera.lookAt(0,1.0,1.8);}
+ pitcher.holder.visible=!wide;pitcher.holder.position.set(0,.08,8.5);pitcher.holder.rotation.y=Math.PI;pitcher.rig.baseballPose('pitch',a?.delivery||0,1);
+ batter.holder.visible=!wide||!!a?.p.foul;batter.holder.position.set(side*1.02,.05,0);batter.holder.rotation.y=side>0?-Math.PI/2:Math.PI/2;batter.rig.baseballPose(a?.p.swing?'swing':'stance',a?.bat||0,side);if(batter.bat){batter.bat.position.copy(batter.holder.worldToLocal(batter.rig.gripPosition()));batter.bat.rotation.set(0,0,side*(-.65+(a?.bat||0)*2.4));}
+ catcher.root.visible=!wide;
+ for(let i=0;i<fielders.length;i++){const f=fielders[i];f.root.visible=wide;let x=f.x,z=f.z;if(wide&&a.p.out&&i===2){x=mix(x,2,a.flight);z=mix(z,18,a.flight);}if(wide)setSimple(f,x,z,0,a.p.out&&i===2&&a.flight<1,ms/1000);}
+ runners.forEach(r=>r.root.visible=false);if(wide){a.runners.forEach((r,i)=>{if(i>=runners.length||r.path.out&&a.run>.92)return;const [x,z]=r.pos,next=AtBatFilm.runner(r.path,Math.min(1,a.run+.02)),yaw=Math.atan2(next[0]-x,next[1]-z);setSimple(runners[i],x,z,yaw,r.path.start!==r.path.end&&a.run<1,ms/1000);});}else{const old=entry?.before.frames[entry.player].bases||bases;old.forEach((on,i)=>{if(on)setSimple(runners[i],...AtBatFilm.bases[i+1],0,false,0);});}
+ ball.visible=!!a&&ms>=380&&(!a.contact||a.p.hit||a.p.out||a.p.foul);if(ball.visible)ball.position.set(...a.ball);renderer.render(scene,camera);return true;
+ }
+ function destroy(){if(closed)return;closed=true;ticket++;canvas.removeEventListener('webglcontextlost',lost);dispose(scene);renderer.dispose();renderer.forceContextLoss?.();}
+ function lost(e){e.preventDefault();if(!closed)onFailure?.();}
+ canvas.addEventListener('webglcontextlost',lost);return {prepare,draw,destroy,get ready(){return ready;}};
+}
