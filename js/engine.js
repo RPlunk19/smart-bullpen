@@ -36,6 +36,6 @@ const Bullpen = (function makeEngine(){
  return removed;}
  function stop(s){if(!s.ended){s.ended=true;s.stopped=true;}}
  function report(s){const n=s.shots.length,hits=s.shots.filter(p=>p.hit).length,inZone=s.shots.filter(p=>p.actual>=0).length,following=s.shots.filter(p=>p.afterMiss);
- return {n,hits,inZone,command:n?hits/n:null,best:s.best,comebacks:following.filter(p=>p.hit).length,following:following.length,score:s.score,passed:s.score>=s.goal,byPitch:pitchTypes.filter(p=>s.settings.pitch==="Mixed"?s.settings.allowed.includes(p):s.settings.pitch===p).map(pitch=>{const a=s.shots.filter(p=>p.pitch===pitch);return {pitch,attempts:a.length,hits:a.filter(p=>p.hit).length};}),zones:zones.map((_,i)=>{const a=s.shots.filter(p=>p.target===i);return {attempts:a.length,hits:a.filter(p=>p.hit).length};})};}
+ return {coachPitches:s.shots.map(e=>({pitch:e.pitch,target:e.target,actual:e.actual})),n,hits,inZone,command:n?hits/n:null,best:s.best,comebacks:following.filter(p=>p.hit).length,following:following.length,score:s.score,passed:s.score>=s.goal,byPitch:pitchTypes.filter(p=>s.settings.pitch==="Mixed"?s.settings.allowed.includes(p):s.settings.pitch===p).map(pitch=>{const a=s.shots.filter(p=>p.pitch===pitch);return {pitch,attempts:a.length,hits:a.filter(p=>p.hit).length};}),zones:zones.map((_,i)=>{const a=s.shots.filter(p=>p.target===i);return {attempts:a.length,hits:a.filter(p=>p.hit).length};})};}
  return {zones,levels,pitchTypes,start,record,undo,stop,report};
 })();
