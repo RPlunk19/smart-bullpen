@@ -11,7 +11,7 @@ $("graphics").addEventListener("click",()=>{if(busy||!session||session.ended)ret
 const H=Clubhouse,profileKey="smart-bullpen-clubhouse-v1";let roster,gearTab="hat",gearPreviewId=null,previewOwner=null,club3D=true;
 {const loaded=PlayerStore.read();roster=loaded.roster;storageAvailable=loaded.ok;}
 function player(){return roster.players.find(p=>p.id===roster.active);}
-function persist(){if(!PlayerStore.write(roster))storageAvailable=false;}
+function persist(){const latest=PlayerStore.read();if(!latest.ok){storageAvailable=false;return;}if(!PlayerStore.write({...roster,coach:latest.roster.coach,tournaments:latest.roster.tournaments}))storageAvailable=false;}
 function syncPlayer(){progress=player().progress;$("nickname").value=player().name;}
 function replacePlayer(p){roster.players=roster.players.map(x=>x.id===p.id?p:x);syncPlayer();persist();}
 function renderHub(){const p=player();$("activePlayerName").textContent=p.name;$("activePlayerProgress").textContent=H.career(p).totalCleared+"/25 arcade levels • "+H.earned(p).length+"/"+H.items.length+" gear items";Avatar.draw(p,$("hubAvatar"));const ds=H.developmentStats(p);$("developmentStatus").textContent=ds.current+" credited days in current streak • "+ds.recent+" of last 30 days";}
