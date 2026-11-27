@@ -1,11 +1,11 @@
 "use strict";
 // Deterministic, offline scenario generation. Stable IDs must not change after release.
 const IQScenarios=(()=>{
-const questions={pitching:[],baseball:[]};
-function add(mode,id,level,topic,prompt,correct,wrong,why){const options=[correct,...wrong].map(String);if(new Set(options).size!==4)throw Error("Duplicate answers "+id);questions[mode].push({id:mode[0]+"2-"+id,level,topic,prompt,correct:String(correct),options,why});}
+const questions={pitching:[],baseball:[]},prompts={pitching:new Set(),baseball:new Set()};
+function add(mode,id,level,topic,prompt,correct,wrong,why){if(prompts[mode].has(prompt))return;prompts[mode].add(prompt);const options=[correct,...wrong].map(String);if(new Set(options).size!==4)throw Error("Duplicate answers "+id);questions[mode].push({id:mode[0]+"2-"+id,level,topic,prompt,correct:String(correct),options,why});}
 const pitch=["Fastball","Changeup","Curveball","Slider","Cutter"],positions=["catcher","first baseman","second baseman","third baseman","shortstop","left fielder","center fielder","right fielder"],base=["first","second","third","home"],counts=[];for(let b=0;b<4;b++)for(let s=0;s<3;s++)counts.push([b,s]);
 const pct=(n,d)=>Math.round(n/d*1000)/10;
-function num(mode,id,level,topic,prompt,n,why,step=1,suffix=""){const correct=String(n)+suffix,wrong=[];for(const x of [n+step,n-step,n+2*step,n-2*step,n+3*step,n+4*step])if(x>=0&&x!==n&&wrong.length<3&&!wrong.includes(String(Math.round(x*10)/10)+suffix))wrong.push(String(Math.round(x*10)/10)+suffix);add(mode,id,level,topic,prompt,correct,wrong,why);}
+function num(mode,id,level,topic,prompt,n,why,step=1,suffix=""){const correct=String(n)+suffix,wrong=[];for(const x of [n+step,n-step,n+2*step,n-2*step,n+3*step,n+4*step])if(x>=0&&(suffix!=="%"||x<=100)&&x!==n&&wrong.length<3&&!wrong.includes(String(Math.round(x*10)/10)+suffix))wrong.push(String(Math.round(x*10)/10)+suffix);add(mode,id,level,topic,prompt,correct,wrong,why);}
 for(const [b,s] of counts)for(let outs=0;outs<3;outs++)for(let mask=0;mask<8;mask++){
  const runners=[0,1,2].filter(i=>mask&(1<<i)).map(i=>base[i]).join(" and ")||"none",context="Count "+b+"–"+s+", "+outs+" out"+(outs===1?"":"s")+", runners: "+runners+". ";
  for(const mode of ["pitching","baseball"]){
@@ -23,7 +23,7 @@ for(let outs=0;outs<3;outs++)for(let mask=0;mask<8;mask++)for(const position of 
  const forced=[0];if(mask&1){forced.push(1);if(mask&2){forced.push(2);if(mask&4)forced.push(3);}}
  for(let target=0;target<4;target++){
  const f=forced.includes(target);
- add("baseball","force-"+outs+"-"+mask+"-"+position.replaceAll(" ","")+"-"+target,2,"Defensive decisions",ctx+"The "+position+" fields a fair ground ball. Before any runner is retired, is there a force play at "+base[target]+"?",""+(f?"Yes — the batter-runner or a runner is forced there":"No — a tag is needed on an advancing runner there"),[f?"No — a tag is needed on an advancing runner there":"Yes — the batter-runner or a runner is forced there","Only if the count was full","Only if a run has scored"],"The batter-runner is forced to first. Existing runners are forced only when all preceding bases are occupied.");
+ add("baseball","force-"+outs+"-"+mask+"-"+position.replaceAll(" ","")+"-"+target,2,"Defensive decisions",ctx+"The "+position+" fields a fair ground ball. Before any runner is retired, is there a force play at "+base[target]+"?",""+(f?"Yes — the batter-runner or a runner is forced there":"No — no runner is forced to that base"),[f?"No — no runner is forced to that base":"Yes — the batter-runner or a runner is forced there","Only if the count was full","Only if a run has scored"],"The batter-runner is forced to first. Existing runners are forced only when all preceding bases are occupied.");
  }
 }
 for(let outs=0;outs<3;outs++)for(let mask=1;mask<8;mask++)for(let inn=1;inn<=7;inn++){
@@ -51,7 +51,7 @@ for(let level=2;level<=5;level++)for(let a=10;a<=50;a+=5)for(let b=10;b<=50;b+=5
  if(pa===pb)continue;
  for(const mode of ["pitching","baseball"]){
  const prompt=level<=3?(mode==="pitching"?"Pitch A hit "+x+"/"+a+" targets; pitch B hit "+y+"/"+b+".":"Hitter A had "+x+" hits in "+a+" at-bats; hitter B had "+y+" hits in "+b+" at-bats."):(mode==="pitching"?"Pitch A induced "+x+" misses on "+a+" swings; pitch B induced "+y+" misses on "+b+" swings.":"Hitter A missed "+x+" of "+a+" swings; hitter B missed "+y+" of "+b+" swings.");
- const correct=pa>pb?"A":"B";add(mode,"compare-"+level+"-"+a+"-"+b+"-"+x,level,level<=3?"Performance comparison":"Analytics",prompt+" Which had the higher observed "+(level<=3?(mode==="pitching"?"target rate":"batting average"):"whiff rate")+"?",correct,[correct==="A"?"B":"A","Equal rates","Cannot calculate from these counts"],"A: "+pa+"%; B: "+pb+"%. Compare rates, not just counts; sample size matters.");
+ const correct=pa>pb?"A":"B",metric=level<=3?(mode==="pitching"?"target rate":"batting average"):"whiff rate";if(level===2||level===4)add(mode,"compare-"+level+"-"+a+"-"+b+"-"+x,level,level<=3?"Performance comparison":"Analytics",prompt+" Which had the higher observed "+metric+"?",correct,[correct==="A"?"B":"A","Equal rates","Cannot calculate from these counts"],"A: "+pa+"%; B: "+pb+"%. Compare rates, not just counts; sample size matters.");else if(level===3)num(mode,"gap-"+a+"-"+b+"-"+x,level,"Performance comparison",prompt+" What is the absolute difference in observed rates, in percentage points (nearest tenth)?",pct(Math.abs(x*b-y*a),a*b),"Subtract the two unrounded rates, then round.",1," pp");else num(mode,"pool-"+a+"-"+b+"-"+x,level,"Analytics",prompt+" What is the pooled whiff rate across both samples (nearest tenth)?",pct(x+y,a+b),"Pool the misses and swings before dividing; do not simply average the two percentages.",1,"%");
  }
 }
 for(let level=2;level<=5;level++)for(const [b,s] of counts)for(let o=0;o<3;o++)for(const p of pitch){
@@ -61,7 +61,7 @@ for(let level=2;level<=5;level++)for(const [b,s] of counts)for(let o=0;o<3;o++)f
 }
 for(let level=3;level<=5;level++)for(let v=70;v<=96;v+=2)for(let diff=5;diff<=15;diff+=2)for(const p of ["Changeup","Curveball","Slider"]){
  const slow=v-diff;
- num("pitching","velo-"+level+"-"+v+"-"+diff+"-"+p,level,"Pitch tracking","A tracking device measures a fastball at "+v+" mph and a "+p.toLowerCase()+" at "+slow+" mph. What is the measured speed separation?",diff,"Subtract the slower speed from the faster. Separation alone does not establish pitch quality.",1," mph");
+ const ctx="A tracking device measures a fastball at "+v+" mph and a "+p.toLowerCase()+" at "+slow+" mph. ";if(level===3)num("pitching","velo-"+level+"-"+v+"-"+diff+"-"+p,level,"Pitch tracking",ctx+"What is the measured speed separation?",diff,"Subtract the slower speed from the faster. Separation alone does not establish pitch quality.",1," mph");if(level===4)num("pitching","velo-"+level+"-"+v+"-"+diff+"-"+p,level,"Pitch tracking",ctx+"What percentage slower is the second pitch relative to the fastball (nearest tenth)?",pct(diff,v),"Divide the difference by fastball velocity and multiply by 100.",1,"%");if(level===5)num("pitching","velo-"+level+"-"+v+"-"+diff+"-"+p,level,"Pitch tracking",ctx+"Assuming constant speed over the same distance, approximately what percentage longer does the slower pitch take (nearest tenth)?",pct(diff,slow),"Travel time is inversely proportional to speed in this simplified model. Real pitches decelerate.",1,"%");
 }
 for(let level=4;level<=5;level++)for(let rpm=1500;rpm<=3000;rpm+=100)for(let eff=50;eff<=100;eff+=5){
  const n=rpm*eff/100;
@@ -69,7 +69,7 @@ for(let level=4;level<=5;level++)for(let rpm=1500;rpm<=3000;rpm+=100)for(let eff
 }
 for(let level=3;level<=5;level++)for(let ab=10;ab<=50;ab+=5)for(let singles=1;singles<=5;singles++)for(let doubles=0;doubles<=3;doubles++)for(let hr=0;hr<=2;hr++){
  if(singles+doubles+hr>ab)continue;const tb=singles+2*doubles+4*hr;
- num("baseball","tb-"+level+"-"+ab+"-"+singles+"-"+doubles+"-"+hr,level,"Hitting analytics","In "+ab+" at-bats, a hitter records "+singles+" singles, "+doubles+" doubles, no triples and "+hr+" home runs. How many total bases?",tb,"Singles count 1, doubles 2, triples 3 and home runs 4.");
+ const ctx="In "+ab+" at-bats, a hitter records "+singles+" singles, "+doubles+" doubles, no triples and "+hr+" home runs. ";if(level===3)num("baseball","tb-"+level+"-"+ab+"-"+singles+"-"+doubles+"-"+hr,level,"Hitting analytics",ctx+"How many total bases?",tb,"Singles count 1, doubles 2, triples 3 and home runs 4.");if(level===4)num("baseball","tb-"+level+"-"+ab+"-"+singles+"-"+doubles+"-"+hr,level,"Hitting analytics",ctx+"What is slugging percentage expressed as total bases per 100 at-bats (nearest tenth)?",pct(tb,ab),"Divide total bases by at-bats and multiply by 100.",1);if(level===5)num("baseball","tb-"+level+"-"+ab+"-"+singles+"-"+doubles+"-"+hr,level,"Hitting analytics",ctx+"What is isolated power (SLG minus AVG) expressed per 100 at-bats (nearest tenth)?",pct(tb-singles-doubles-hr,ab),"Subtract hits from total bases, divide by at-bats and multiply by 100.",1);
 }
 for(let level=3;level<=5;level++)for(let attempts=5;attempts<=35;attempts+=5)for(let stolen=1;stolen<attempts;stolen++){
  num("baseball","sb-"+level+"-"+attempts+"-"+stolen,level,"Baserunning","A runner successfully steals "+stolen+" bases in "+attempts+" attempts. What is their success rate (nearest tenth)?",pct(stolen,attempts),"Successful steals divided by attempts, times 100.",1,"%");
