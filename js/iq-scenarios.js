@@ -12,8 +12,8 @@ for(const [b,s] of counts)for(let outs=0;outs<3;outs++)for(let mask=0;mask<8;mas
   const id=b+"-"+s+"-"+outs+"-"+mask;
   const strike=s===2?"Strikeout (assume caught third strike)":"Count becomes "+b+"–"+(s+1);
   const ball=b===3?"Walk":"Count becomes "+(b+1)+"–"+s;
-  add(mode,"countS-"+id,1,"Count",context+"The next pitch is a called strike, caught cleanly. What happens?",strike,[ball,"The inning ends automatically","Count stays unchanged"],"A called strike increases strikes by one; a caught third strike retires the hitter.");
-  add(mode,"countB-"+id,1,"Count",context+"The next pitch is called a ball. What happens?",ball,[strike,"The inning ends automatically","Count stays unchanged"],"Four balls award first base; otherwise the ball count increases.");
+  add(mode,"countS-"+id,1,"Count",context+"The next pitch is a called strike, caught cleanly. What happens?",strike,[ball,"The batter is awarded second base","Count stays unchanged"],"A called strike increases strikes by one; a caught third strike retires the hitter.");
+  add(mode,"countB-"+id,1,"Count",context+"The next pitch is called a ball. What happens?",ball,[strike,"The batter is awarded second base","Count stays unchanged"],"Four balls award first base; otherwise the ball count increases.");
   const forced=(mask&1)?(mask&2)?(mask&4)?3:2:1:0;
   if(b===3)num(mode,"walk-"+id,2,"Baserunners",context+"Ball four is caught. How many existing runners must advance one base because of the walk?",forced,"Only runners forced by the batter's award of first must advance.");
  }
@@ -74,5 +74,50 @@ for(let level=3;level<=5;level++)for(let ab=10;ab<=50;ab+=5)for(let singles=1;si
 for(let level=3;level<=5;level++)for(let attempts=5;attempts<=35;attempts+=5)for(let stolen=1;stolen<attempts;stolen++){
  num("baseball","sb-"+level+"-"+attempts+"-"+stolen,level,"Baserunning","A runner successfully steals "+stolen+" bases in "+attempts+" attempts. What is their success rate (nearest tenth)?",pct(stolen,attempts),"Successful steals divided by attempts, times 100.",1,"%");
 }
+
+// Additional rules and situational families. These assume standard baseball rules
+// unless stated; local youth modifications may differ.
+for(let outs=0;outs<3;outs++)for(let b=0;b<4;b++)for(let mask=1;mask<8;mask++){
+ const runners=[0,1,2].filter(i=>mask&(1<<i)).map(i=>base[i]).join(" and "),ctx="Count "+b+"–2, "+outs+" outs, runners on "+runners+". ",id=outs+"-"+b+"-"+mask;
+ for(const mode of ["pitching","baseball"]){
+ add(mode,"foul-"+id,1,"Rules",ctx+"The batter hits an ordinary foul ball that is not caught and is not a bunt. What is the count afterward?",b+"–2",[b+"–1","Strikeout","Walk"],"An uncaught ordinary foul with two strikes does not add a third strike.");
+ const eligible=!(mask&1)||outs===2;
+ add(mode,"third-"+id,3,"Rules",ctx+"The next swinging strike is not caught. Under standard uncaught-third-strike rules, may the batter attempt to reach first?",eligible?"Yes":"No — the batter is out",[eligible?"No — the batter is out":"Yes","Only if the ball was hit fair","Only if the pitcher calls time"],"The batter may attempt first on an uncaught third strike if first is unoccupied or there are two outs. League exceptions exist.");
+ }
+ if(outs<2&&(mask&4)){
+ add("baseball","tag-"+id,2,"Baserunning",ctx+"A fair fly is caught. The runner on third wants to score. What is the legal timing?", "Leave third after the ball is first touched by a fielder, or retouch third before advancing",["Leave on contact without retouching","Wait until the next batter","A runner cannot advance on a caught fly"],"Runners must retouch their base after a caught fly unless they left no earlier than first touch.");
+ }
+ if(outs===2&&(mask&4)){
+ add("baseball","run-"+id,4,"Scoring",ctx+"A fair ground ball is fielded and the batter-runner is retired at first for the third out. The runner from third crossed home before that out. Does the run count?","No",["Yes, because home was touched first","Yes, if the pitcher made the throw","Only if the count was full"],"No run scores when the third out is the batter-runner before reaching first.");
+ }
+}
+for(let outs=0;outs<2;outs++)for(let mask of [3,7])for(let inning=1;inning<=7;inning++)for(const location of ["near second base","near shortstop","near third base"]){
+ const runners=mask===3?"first and second":"bases loaded",ctx="Inning "+inning+", "+outs+" outs, "+runners+". ";
+ for(const mode of ["pitching","baseball"])add(mode,"iff-"+outs+"-"+mask+"-"+inning+"-"+location.replaceAll(" ",""),3,"Rules",ctx+"The batter hits a fair pop-up "+location+" that an infielder can catch with ordinary effort (not a bunt or line drive). What may the umpire declare?","Infield fly",["Automatic double play","Ground-rule double","Balk"],"With runners on first and second or bases loaded and fewer than two outs, an eligible fair fly can be declared an infield fly.");
+}
+for(let outs=0;outs<3;outs++)for(const location of ["left field","center field","right field"])for(const runner of ["first","second","third"])for(const score of ["tied","ahead by one","behind by one"]){
+ const ctx=outs+" outs, runner on "+runner+", team "+score+". ";
+ add("baseball","read-"+outs+"-"+location.replaceAll(" ","")+"-"+runner+"-"+score.replaceAll(" ",""),2,"Baserunning",ctx+"A line drive heads toward "+location+" and may be caught. What should the runner do before committing to advance?", "Read the ball, know the outs and follow base-coach guidance",["Run without watching the ball","Assume it is a hit","Stop watching the field"],"The best advance depends on whether the ball is caught, the outs, and team instructions.");
+ add("pitching","backup-"+outs+"-"+location.replaceAll(" ","")+"-"+runner+"-"+score.replaceAll(" ",""),2,"Fielding",ctx+"A hit goes to "+location+". Your team assigns the pitcher to back up the expected throw. What is your first responsibility?","Read the play and move to the assigned backup position",["Remain on the mound regardless","Stand in the runner's path","Chase the outfielder"],"Backup responsibilities depend on team coverage and the developing play.");
+}
+for(const [mode,items] of Object.entries({
+ baseball:[
+ [1,"Hitting","Your coach calls for a normal swing and the pitch is clearly outside your hitting zone. What is a reasonable decision?","Take the pitch",["Swing at every pitch","Step toward the catcher","Close your eyes"],"Good swing decisions start with recognizing pitches you can handle."],
+ [1,"Fielding","A routine ground ball is coming toward you. What is your first priority?","Get into position and secure the ball",["Throw before catching it","Look away","Run toward the dugout"],"Secure possession before making a play."],
+ [1,"Team play","An infielder and outfielder both approach a fly ball. What helps prevent a collision?","Communicate using the team's priority rules",["Both stay silent","Both dive blindly","Ignore the other player"],"Clear communication and practiced priority rules help keep players safe."],
+ [2,"Hitting","You are behind in the count and your coach wants you to protect the plate. What should change?","Be ready to compete on reachable strikes without chasing everything",["Swing at every pitch","Always bunt","Never swing"],"Protecting with two strikes does not mean abandoning pitch recognition."],
+ [2,"Fielding","A throw to first is not available after you field a ground ball. What is the best response?","Secure the ball and avoid forcing a risky throw",["Throw as hard as possible anyway","Throw into the stands","Drop the ball"],"Keeping possession can prevent an extra base."],
+ [3,"Strategy","A teammate is on second with no outs. Your coach has not called a bunt. What is appropriate?","Use the team hitting approach and the actual pitch rather than assuming a sacrifice",["Always bunt","Always swing for a home run","Never swing"],"The best approach depends on team strategy, hitter strengths and pitch location."],
+ [4,"Analytics","A hitter has a high batting average but rarely walks or hits for extra bases. Which metrics add context?","On-base and slugging measures",["Jersey number and height","Only RBI totals","Only stolen bases"],"Different offensive metrics capture distinct contributions."],
+ [5,"Analytics","A team's stolen-base success rate fell after facing several strong throwing catchers. What should an analyst consider?","Opponent quality and attempt selection",["The runners definitely became slower","Only total steals","The context is irrelevant"],"Observed outcomes reflect selection and opponent context, not ability alone."]
+ ],
+ pitching:[
+ [1,"Fielding","Your catcher calls time and the umpire grants it. Should you deliver a pitch immediately?","No — wait until play resumes",["Yes, throw immediately","Only if the count is full","Only with bases empty"],"Do not pitch while time is out."],
+ [2,"Sequencing","Your catcher sets up for a pitch you do not know how to throw. What should you do?","Communicate and use a familiar approved pitch",["Attempt it at maximum effort","Ignore the catcher","Invent a grip mid-delivery"],"Use pitches you know and communicate with your coach or catcher."],
+ [3,"Strategy","A hitter has been taking borderline pitches and you are behind in the count. What adjustment fits the evidence?","Use a competitively located familiar pitch instead of relying on chase",["Throw farther outside","Ignore the count","Throw only a new pitch"],"Count leverage and hitter discipline both matter."],
+ [4,"Pitch tracking","Two reports use different sign conventions for horizontal break. What should you do before comparing them?","Confirm the coordinate convention and normalize the values",["Compare signed values directly","Assume one pitcher improved","Ignore the units"],"Tracking systems may define axes differently; compare like with like."],
+ [5,"Pitch tracking","A new pitch shape appears in a tracking report after a device was moved. What is the strongest next step?","Verify alignment and repeat the measurement under comparable conditions",["Treat it as proven pitch design success","Change the athlete's mechanics immediately","Ignore calibration"],"Measurement changes can masquerade as performance changes."]
+ ]
+}))items.forEach(([level,topic,prompt,correct,wrong,why],i)=>add(mode,"concept-"+i,level,topic,prompt,correct,wrong,why));
 return {questions};
 })();
