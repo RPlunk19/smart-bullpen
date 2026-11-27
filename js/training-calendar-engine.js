@@ -20,7 +20,7 @@ if(type==="training"&&(!["crate","robot","sniper","atbats"].includes(game)||!Num
 const individual=type==="training"?focus(C,roster,player,goal,game):null;
 const next={id:old?.id||C.uid(),player,date,type,game:type==="training"?game:"",cap:type==="training"?cap:null,pitches:type==="training"?[...new Set(pitches)]:[],goal:type==="training"?goal:"auto",focus:individual?.note||"",note:String(note||"").slice(0,200),reviewKey:""};
 const proposed={...coach,plans:[...coach.plans.filter(p=>p.id!==id),next]},v=review(C,W,roster,proposed,player,date,today);
-if(type==="training"&&v.hard)return {ok:false,error:"Throwing restriction: "+v.reason+" Choose recovery or rest."};
+if(type==="training"&&v.hard)return {ok:false,error:"Throwing restriction: "+v.reason+" Choose Game Day, recovery or rest."};
 if(type==="training"&&date===today){const used=W.day(C,roster,coach,player,date).total,limit=coach.workload?.settings?.[player]?.cap;if(cap<=used||Number.isInteger(limit)&&used>=limit)return {ok:false,error:"Recorded throws already reach this ceiling. Choose recovery or rest."};}
 return {ok:true,plan:next,advisory:v.reason};}
 return {kinds,gameDays,upcoming,review,draft,approve,focus,acknowledge,suggestion,edit};
