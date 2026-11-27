@@ -2,3 +2,6 @@
 @media(min-width:560px){.throwCounters{grid-template-columns:repeat(3,minmax(0,1fr))}}.throwCounters strong{font-size:clamp(21px,5vw,34px)}.prepPage .modeLink{margin:3px 0}
 
 .videoGuide{margin:14px 0;padding:12px;border:1px solid #49647c;border-radius:10px}.videoGuide summary{cursor:pointer;font-weight:800;color:#f1d48f}.videoCard{background:#142739;border:1px solid #49647c;border-radius:10px;padding:12px;margin:10px 0}.videoCard h3{margin-bottom:6px}.videoActions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.videoActions button,.videoActions a{font-size:13px;min-height:44px}.videoSlot{margin-top:12px}.videoSlot iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:8px;background:#080f19;display:block}.videoSlot p{margin-top:6px}
+
+/* Beta 0.27 presentation only */
+.prepPage{background:radial-gradient(ellipse at top,#20354b,#0c1623 75%)}.prepPage .clockCard{background:#192b3e;border-color:#52677c}.prepPage .primary{background:#edbd59;color:#142131;box-shadow:none;letter-spacing:0}.prepPage .clockControls button{min-height:44px}.prepPage .penBlock{border-color:#52677c;border-radius:12px}
