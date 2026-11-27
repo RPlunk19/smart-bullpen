@@ -1,3 +1,6 @@
 .recovery{background:radial-gradient(ellipse at top,#38566b,#172d3d 75%)}.developmentDays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}.developmentDays div{border:1px solid #8295a5;border-radius:7px;padding:5px;min-height:54px;overflow-wrap:anywhere;font-size:11px}.developmentDays .credited{background:#315d50}.developmentDays .away{background:#4d4964}.recovery #leaderboard p{border-bottom:1px solid #8295a5;padding:7px}.recovery #checkin{border-top:1px solid #8295a5;margin-top:15px}.recovery input[type=number]{width:75px}
 /* Beta 0.27 presentation only */
 .recovery{background:radial-gradient(ellipse at top,#294454,#0c1623 75%)}.recovery #checkin{border:1px solid #52677c;border-radius:12px;background:#162638;padding:16px;margin:16px 0}.developmentDays div{border-color:#52677c;border-radius:8px;min-height:54px}.developmentDays .credited{background:#315d50}.recovery #leaderboard p{border-color:#34495d}
+
+/* Selected day correction */
+#days>div{min-width:0;padding:3px}#days>div>button{display:block;width:100%;min-height:44px;padding:3px 0;font-size:11px;background:transparent;border:0;color:inherit}#days>div>div{padding:2px;border:0;min-height:0;font-size:10px}#removeDay{background:#492b39;color:#ffc9c9;border-color:#9c6069}#dayEntry{font-weight:700;overflow-wrap:anywhere}
