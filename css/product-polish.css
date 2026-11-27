@@ -13,3 +13,11 @@ header h1{line-height:1.05}header small{letter-spacing:1.4px}.modeGrid .modeCard
 #clubhouse .avatarPanel{background:radial-gradient(ellipse at 50% 30%,#344e66,#192b3e 68%);border-color:#52677c}#clubhouse .gearTile{border-color:#52677c;border-radius:12px}#clubhouse .gearTile.equipped{border-color:var(--gold)}#clubhouse .gearPreview{background:radial-gradient(ellipse,#344e66,#162638)}#clubhouse .clubGrid>.panel{margin-top:0}#clubhouse .clubLabel{font-size:14px}#clubhouse .careerMetrics>div{background:#162638;border-color:#52677c}#clubhouse .campaignHead a{display:inline-flex;align-items:center;min-height:44px}
 @media(max-width:480px){.sbHome .modeGrid{gap:8px}.sbHome .modeCard{padding:12px;min-height:236px}.sbHome .modeCard strong{font-size:19px}.sbHome .modeCard span{font-size:12px}.sbHome .modeCard .modeAction{font-size:12px;padding:6px}.sbHome .sbPrepGrid .modeCard{min-height:170px}.sbHome .sbQuickGrid>*{font-size:13px;padding:10px}.sbPlayerNav a,.sbPlayerNav button{font-size:12px}.sbHome .modeCard:before{font-size:28px}}
 @media(max-width:340px){.sbHome .modeGrid{grid-template-columns:1fr}.sbHome .modeCard{min-height:180px}}
+
+
+.sbPlayerNav .sbNavIcon{flex-shrink:0;display:block}.sbPlayerNav a,.sbPlayerNav button{gap:7px}.sbHome #assignedToday h3{color:var(--gold);font-size:17px}
+@media(max-width:600px){
+  body:has(#hub:not([hidden])){padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .sbHome .sbPlayerNav{position:fixed;bottom:0;left:0;right:0;z-index:8;margin:0;border-radius:14px 14px 0 0;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -5px 24px #070e1855}
+  .sbPlayerNav a,.sbPlayerNav button{flex-direction:column;gap:3px;min-height:54px;font-size:11px}
+}
