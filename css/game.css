@@ -21,3 +21,18 @@ body{background:radial-gradient(ellipse at top,#423061,#14233a 65%)}.welcome{pad
 [data-world="volcano"],[data-theme="volcano"]{--scene:url('../assets/world-volcano.svg');--worldAccent:#ffdd85}
 
 [data-world="sky"],[data-theme="sky"]{--scene:url('../assets/world-sky.svg');--worldAccent:#fff3b0}
+
+
+/* Beta 0.27 shared design tokens. Arena art and game-specific styles remain intact. */
+:root{--gold:#edbd59;--ink:#0c1623;--panel:#192b3e;--line:#52677c;--muted:#b6c5d5;--sb-surface:#162638;--sb-text:#f1f5f9;--sb-radius:14px}
+body{background:radial-gradient(ellipse at top,#20354b 0,#0c1623 65%);color:var(--sb-text)}
+header{border-bottom-color:#34495d;padding:16px 18px;margin-bottom:16px}header small{color:var(--muted);letter-spacing:1.2px}header a{color:var(--gold);padding:10px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+h2{font-size:clamp(20px,3vw,24px);letter-spacing:-.35px}h3{font-size:17px}p{line-height:1.55}
+.panel{border-color:#34495d;border-radius:var(--sb-radius);padding:clamp(14px,2.5vw,22px)}.muted,footer{font-size:13px;line-height:1.55}
+a{color:#f3d18b;text-underline-offset:3px}a:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+input,select,textarea{max-width:100%;border-color:var(--line);border-radius:10px;color:var(--sb-text);background:#20354b;font:inherit}textarea{padding:12px}
+button:disabled{opacity:.65}#setup .primary,#result .primary,.coach .primary,.prepPage .primary{background:var(--gold);color:#142131;border-color:var(--gold);box-shadow:none;letter-spacing:0;font-weight:800}
+#setup .settings label{font-size:14px}#result .stats>div{background:#192b3e;border-color:#52677c}
+dialog{border-radius:14px}dialog::backdrop{background:#07101bd9}
+th{font-weight:750;color:#dce7f1}th,td{font-variant-numeric:tabular-nums}
+@media(max-width:480px){header{padding:12px 14px}main{padding-inline:12px}.campaignHead{flex-wrap:wrap}.settings{gap:10px}}
