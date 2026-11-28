@@ -1,0 +1,17 @@
+"use strict";
+const DiscGolf=(()=>{
+const implementsList=[3,4,5,6,7,"Gray PlyoBall","Yellow PlyoBall","Red PlyoBall","Blue PlyoBall"],label=x=>typeof x==="number"?x+" oz":x;
+const layouts=[["pine","Pine Ridge",[3,3,2,3,2,3,2,3,2]],["lake","Lakeview Links",[2,3,2,3,3,2,3,2,3]],["canyon","Red Rock Canyon",[3,2,3,2,3,2,3,2,2]]];
+const courses=layouts.map(([id,name,pars],c)=>({id,name,par:pars.reduce((a,b)=>a+b,0),holes:pars.map((par,i)=>{const length=par===2?90+(i*13+c*7)%35:155+(i*17+c*11)%65,side=(i+c)%2?1:-1,basket={x:side*(12+(i*9)%30),y:length},hazards=[{kind:"tree",x:side*14,y:length*.35,r:8+(i%3)*2},{kind:c===2?"rock":"tree",x:-side*18,y:length*.63,r:10}];if(c===1||i%3===1)hazards.push({kind:"water",x:side*25,y:length*.72,r:14});return {par,length,basket,hazards};})}));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+function start(id,cap){const course=courses.find(c=>c.id===id);if(!course||!Number.isInteger(cap)||cap<1||cap>50)throw Error("Invalid course or ceiling");return {course:id,cap,hole:0,pos:{x:0,y:0},scores:[],strokes:0,throws:[],done:false,stopped:false};}
+function hole(s){return courses.find(c=>c.id===s.course).holes[s.hole];}
+function endHole(s){s.scores.push(s.strokes);s.strokes=0;s.hole++;s.pos={x:0,y:0};if(s.hole===9)s.done=true;}
+function exhaust(s){if(s.done)return;if(s.strokes>0)endHole(s);while(!s.done){s.strokes=10;endHole(s);}}
+function stop(s){s.stopped=true;exhaust(s);}
+function shot(s,implement,aim,tilt,mph){if(s.done||s.throws.length>=s.cap||!implementsList.includes(implement)||!Number.isFinite(aim)||Math.abs(aim)>180||!Number.isFinite(tilt)||Math.abs(tilt)>45||mph!==null&&(!Number.isFinite(mph)||mph<10||mph>120))return null;const h=hole(s),from={...s.pos},heading=Math.atan2(h.basket.x-from.x,h.basket.y-from.y)+aim*Math.PI/180,travel=mph===null?0:mph*1.65,curve=tilt/45*travel*.35,points=[from];let outcome=mph===null?"No reading":"Fairway",end=from,penalty=0;for(let i=1;i<=40&&mph!==null;i++){const t=i/40,p={x:from.x+Math.sin(heading)*travel*t+Math.cos(heading)*curve*t*t,y:from.y+Math.cos(heading)*travel*t-Math.sin(heading)*curve*t*t};points.push(p);end=p;const obstacle=h.hazards.find(o=>dist(o,p)<=o.r);if(obstacle){outcome=obstacle.kind==="water"?"Water hazard +1":obstacle.kind==="tree"?"Tree obstruction":"Rock obstruction";if(obstacle.kind==="water"){penalty=1;end=from;}else end=points.at(-2);break;}if(Math.abs(p.x)>85||p.y< -20||p.y>h.length+65){outcome="Out of bounds +1";penalty=1;end=from;break;}}
+if(mph!==null&&outcome==="Fairway"&&dist(end,h.basket)<=7){outcome="Holed";end={...h.basket};}s.strokes+=1+penalty;s.throws.push({hole:s.hole,implement,aim,tilt,mph,outcome,penalty});s.pos=end;if(outcome==="Holed")endHole(s);if(s.throws.length===s.cap&&!s.done)exhaust(s);return {points,end,outcome,penalty};}
+function score(s){return s.scores.reduce((a,b)=>a+b,0);}
+function leaders(players,id){return players.flatMap(p=>{const rows=(p.coachSessions||[]).filter(r=>r.game==="disc"&&r.discData?.course===id&&r.discData.complete&&!r.discData.stopped);if(!rows.length)return [];const best=rows.slice().sort((a,b)=>a.discData.score-b.discData.score||a.n-b.n)[0];return [{name:p.name,score:best.discData.score,throws:best.n,date:best.date}];}).sort((a,b)=>a.score-b.score||a.throws-b.throws||a.name.localeCompare(b.name));}
+return {courses,implementsList,label,start,hole,shot,stop,score,leaders,dist};
+})();
