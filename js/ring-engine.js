@@ -7,7 +7,7 @@ const Ring=(function ring(){
  function validMask(mask){return Array.isArray(mask)&&mask.length>=2&&mask.every(x=>Number.isInteger(x)&&x>=0&&x<9)&&new Set(mask).size===mask.length;}
  function available(s,i){const d=s.fighters[1-i];return d.mask.filter(z=>!(s.mode==="solo"&&i===0&&((s.boss.ability==="guard"&&z===d.guard)||(s.boss.ability==="armor"&&d.broken.length<2&&z===s.boss.core))));}
  function call(s,i,r){if(!s.bags[i].length)s.bags[i]=s.pitches.slice();return {zone:pick(available(s,i).filter(x=>x!==s.previous[i]),r),pitch:s.bags[i].splice(Math.floor(r()*s.bags[i].length),1)[0]};}
- function start({mode,boss,cap,names,pitches},r=Math.random){if(!["solo","duel"].includes(mode)||!Number.isInteger(cap)||cap<1||cap>10||!pitches.length||mode==="solo"&&!boss)throw Error("Invalid setup");
+ function start({mode,boss,cap,names,pitches},r=Math.random){if(!["solo","duel"].includes(mode)||!Number.isInteger(cap)||cap<1||cap>50||!pitches.length||mode==="solo"&&!boss)throw Error("Invalid setup");
  const mask=mode==="solo"&&boss.mask!==undefined?boss.mask:range();if(!validMask(mask))throw Error("Invalid boss hitbox");const parts=mode==="solo"&&Array.isArray(boss.parts)&&boss.parts.length===9?boss.parts:zones;
  const weakPool=mode==="solo"&&boss.ability==="agility"?mask.filter(z=>z%3===1):mode==="solo"&&boss.ability==="armor"?mask.filter(z=>z!==boss.core):mask;
  const s={mode,boss,cap,pitches:pitches.slice(),fighters:[fighter(names[0],100,pick(range(),r),range(),zones),fighter(names[1],mode==="solo"?boss.hp:100,pick(weakPool,r),mask,parts)],turn:0,previous:[-1,-1],bags:[[],[]],log:[],history:[],replay:null,result:null};s.call=call(s,0,r);return s;}
