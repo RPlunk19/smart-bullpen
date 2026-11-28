@@ -17,9 +17,9 @@ if(id&&(!old||JSON.stringify(old)!==expected))return {ok:false,error:"Assignment
 if(!id&&coach.plans.some(p=>p.player===player&&p.date===date))return {ok:false,error:"An assignment already exists. Edit it instead."};
 if(!id&&coach.plans.length>=3000)return {ok:false,error:"Local assignment limit reached."};
 const familiar=roster.players.find(p=>p.id===player)?.atbatsPreferences?.arsenal||["Fastball"];
-if(type==="training"&&(!["crate","robot","sniper","atbats"].includes(game)||!Number.isInteger(cap)||cap<1||cap>50||!Array.isArray(pitches)||!pitches.length||pitches.some(p=>!familiar.includes(p))))return {ok:false,error:"Choose a game, valid maximum and at least one familiar pitch."};
-const individual=type==="training"?focus(C,roster,player,goal,game):null;
-const next={id:old?.id||C.uid(),player,date,type,game:type==="training"?game:"",cap:type==="training"?cap:null,pitches:type==="training"?[...new Set(pitches)]:[],goal:type==="training"?goal:"auto",focus:individual?.note||"",note:String(note||"").slice(0,200),reviewKey:""};
+if(type==="training"&&(!["crate","robot","sniper","atbats","disc"].includes(game)||!Number.isInteger(cap)||cap<1||cap>50||!Array.isArray(pitches)||game!=="disc"&&(!pitches.length||pitches.some(p=>!familiar.includes(p)))))return {ok:false,error:"Choose a game, valid maximum and at least one familiar pitch."};
+const individual=type==="training"?game==="disc"?{note:"Coach-approved implements; velocity control and shot selection. No extra throws."}:focus(C,roster,player,goal,game):null;
+const next={id:old?.id||C.uid(),player,date,type,game:type==="training"?game:"",cap:type==="training"?cap:null,pitches:type==="training"&&game!=="disc"?[...new Set(pitches)]:[],goal:type==="training"?goal:"auto",focus:individual?.note||"",note:String(note||"").slice(0,200),reviewKey:""};
 const proposed={...coach,plans:[...coach.plans.filter(p=>p.id!==id),next]},v=review(C,W,roster,proposed,player,date,today);
 if(type==="training"&&v.hard)return {ok:false,error:"Throwing restriction: "+v.reason+" Choose Game Day, recovery or rest."};
 if(type==="training"&&date===today){const used=W.day(C,roster,coach,player,date).total,limit=coach.workload?.settings?.[player]?.cap;if(cap<=used||Number.isInteger(limit)&&used>=limit)return {ok:false,error:"Recorded throws already reach this ceiling. Choose recovery or rest."};}
